@@ -207,34 +207,48 @@ function buscar_(body) {
  * Esos datos son privados: viajan solo con tu código secreto y se guardan solo en tu celular.
  * Las columnas se reconocen por el NOMBRE del encabezado (no por su posición).
  */
-const SEG_SHEET_ID = '1KlOZ33LTrAPMszSLMUBulWgQFGfV3UxvI1rCdIYkrMU';  // "Seguimiento_prospectos_mejorado"
+const SEG_SHEET_ID = '1HMYvjpsh1yWWOC0uKFnV5Fa9S6U2g5Y7yifAgt1Xfrc';  // "Seguimiento_prospectos_mejorado"
 const SEG_TAB = 'Prospectos';
+// 1) Encabezados EXACTOS (ya normalizados: sin acentos, minúsculas). Se prueban primero.
+const SEG_EXACT = {
+  negocio: ['negocio'], encargado: ['encargado'], contacto: ['contacto'], zona: ['zona'], tipo: ['tipo'], etapa: ['etapa'],
+  recibo: ['recibo mensual (mxn)', 'recibo mensual'], precio: ['precio con iva (mxn)', 'precio con iva'],
+  comision: ['comision (mxn)', 'comision'], comPond: ['comision ponderada (mxn)', 'comision ponderada'],
+  prob: ['probabilidad'], objecion: ['objecion principal', 'objecion'],
+  fechaSig: ['fecha del siguiente paso', 'fecha siguiente paso', 'fecha de siguiente paso'],
+  sigPaso: ['siguiente paso', 'proximo paso'], comentarios: ['comentarios', 'comentario', 'notas']
+};
+// 2) Si algún encabezado no coincide exacto, se busca por parecido (solo en columnas todavía libres).
 const SEG_RULES = [
-  ['encargado', /encargad|responsable|due[nñ]o/],
-  ['negocio', /negocio|nombre|prospecto/],
+  ['encargado', /encargad|responsable|dueno/],
+  ['negocio', /negocio|nombre/],
   ['comPond', /ponderad/],
-  ['comision', /comisi/],
-  ['contacto', /tel[eé]fono|contacto|celular|whats/],
+  ['comision', /^comision(?!.*(ponderad|%))/],
+  ['contacto', /^(telefono|contacto|celular|whats)/],
   ['zona', /zona/],
-  ['tipo', /tipo|giro|segmento/],
-  ['etapa', /etapa|estatus|estado/],
-  ['recibo', /recibo|pago.*luz/],
-  ['precio', /precio|inversi|monto|cotiza/],
+  ['tipo', /^tipo|giro|segmento/],
+  ['etapa', /^etapa|estatus|estado/],
+  ['recibo', /^recibo/],
+  ['precio', /precio|inversion|monto|cotiza/],
   ['prob', /probab/],
   ['objecion', /objeci/],
-  ['fechaSig', /fecha/],
-  ['sigPaso', /(siguiente|pr[oó]ximo).*(paso|acci)|^acci[oó]n/],
-  ['comentarios', /comentario|nota|observ/]
+  ['fechaSig', /fecha.*(siguiente|proximo)/],
+  ['sigPaso', /^(siguiente|proximo) (paso|accion)|^accion/],
+  ['comentarios', /comentario|^notas?$|observ/]
 ];
 
 function segMap_(row) {
-  const map = {}, taken = {};
-  row.forEach(function (h, i) {
-    const t = norm_(h);
-    if (!t) return;
-    for (let k = 0; k < SEG_RULES.length; k++) {
-      const key = SEG_RULES[k][0];
-      if (!taken[key] && SEG_RULES[k][1].test(t)) { map[key] = i; taken[key] = 1; break; }
+  const heads = row.map(function (h) { return norm_(h); });
+  const map = {}, used = {};
+  Object.keys(SEG_EXACT).forEach(function (key) {
+    for (let i = 0; i < heads.length; i++) {
+      if (!used[i] && heads[i] && SEG_EXACT[key].indexOf(heads[i]) !== -1) { map[key] = i; used[i] = 1; return; }
+    }
+  });
+  SEG_RULES.forEach(function (rule) {
+    if (map[rule[0]] !== undefined) return;
+    for (let i = 0; i < heads.length; i++) {
+      if (!used[i] && heads[i] && rule[1].test(heads[i])) { map[rule[0]] = i; used[i] = 1; return; }
     }
   });
   return map;
