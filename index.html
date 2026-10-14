@@ -1095,6 +1095,8 @@
       method:"POST", redirect:"follow",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify(payload)
+    }).catch(function(){
+      throw new Error("No pude llegar al script. Revisa que la URL termine en /exec y que esté publicado con acceso «Cualquier persona». Pruébala pegándola en una pestaña nueva: debe decir «Prospectos: script activo».");
     }).then(function(res){
       return res.text().then(function(t){
         var d; try{ d = JSON.parse(t); }catch(e){ throw new Error("El script no devolvió JSON. Revisa que esté publicado con acceso para «Cualquier persona»."); }
