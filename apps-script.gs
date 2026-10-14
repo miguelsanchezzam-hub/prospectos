@@ -27,7 +27,7 @@
  */
 
 const TOKEN = 'CAMBIA-ESTE-CODIGO';   // <- pon aquí un código largo y privado
-const SHEET_ID = '';                  // vacío = la hoja a la que está vinculado este script
+const SHEET_ID = '';                  // DÉJALO VACÍO si abriste el script desde la hoja (Extensiones → Apps Script)
 const TAB = 'App prospectos';
 
 const HEADERS = [
@@ -123,6 +123,13 @@ const CENTER = { latitude: 21.1250, longitude: -101.6860 };  // León, Gto.
 const RADIUS = 25000;                                         // metros
 const KNOWN_TABS = ['Calificación de prospectos', TAB];      // pestañas contra las que se compara
 
+// Acepta el ID solo o la dirección completa del documento (…/d/ID/edit?gid=…)
+function cleanId_(s) {
+  s = String(s || '').trim();
+  const m = s.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : s.split(/[\/?#]/)[0];
+}
+
 function norm_(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
 }
@@ -134,7 +141,7 @@ function nameKey_(name, addr) { return norm_(name) + '|' + norm_(addr).slice(0, 
 
 // Nombres/direcciones/teléfonos que ya tienes en la hoja (A=nombre, D=dirección, F=teléfono)
 function knownSet_() {
-  const ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SHEET_ID ? SpreadsheetApp.openById(cleanId_(SHEET_ID)) : SpreadsheetApp.getActiveSpreadsheet();
   const keys = {}, phones = {};
   KNOWN_TABS.forEach(function (t) {
     const sh = ss.getSheetByName(t);
@@ -252,7 +259,7 @@ function segDate_(v) {
 function segText_(v) { return v === null || v === undefined ? '' : String(v).trim(); }
 
 function seguimiento_() {
-  const ss = SpreadsheetApp.openById(SEG_SHEET_ID);
+  const ss = SpreadsheetApp.openById(cleanId_(SEG_SHEET_ID));
   const sh = ss.getSheetByName(SEG_TAB);
   if (!sh) return { ok: false, error: 'No encontré la pestaña «' + SEG_TAB + '» en el documento de seguimiento' };
   const data = sh.getDataRange().getValues();
@@ -288,7 +295,7 @@ function seguimiento_() {
 }
 
 function getSheet_() {
-  const ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SHEET_ID ? SpreadsheetApp.openById(cleanId_(SHEET_ID)) : SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(TAB);
   if (!sh) sh = ss.insertSheet(TAB);
   if (sh.getLastRow() === 0) {
