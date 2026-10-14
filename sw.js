@@ -1,8 +1,8 @@
 /* Service worker: la app abre sin internet.
    Red primero (para que las actualizaciones lleguen), caché como respaldo.
    Las llamadas al Apps Script (otro dominio) nunca pasan por aquí. */
-const CACHE = 'prospectos-v2';
-const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+const CACHE = 'prospectos-v3';
+const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'logo-bajio.png', 'logo-wise.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
