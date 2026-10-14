@@ -57,6 +57,7 @@ function doPost(e) {
     }
     if (body.action === 'buscar') return out_(buscar_(body));
     if (body.action === 'seguimiento') return out_(seguimiento_());
+    if (body.action === 'pull') return out_(pull_());
     if (body.action !== 'upsert') return out_({ ok: false, error: 'Acción desconocida' });
 
     const lock = LockService.getScriptLock();
@@ -292,6 +293,28 @@ function seguimiento_() {
   }
   const faltan = SEG_RULES.map(function (x) { return x[0]; }).filter(function (k) { return map[k] === undefined; });
   return { ok: true, rows: rows, faltan: faltan };
+}
+
+// Devuelve todo lo guardado en "App prospectos" para que otros dispositivos se pongan al día.
+function pull_() {
+  const sh = getSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return { ok: true, rows: [] };
+  const t = function (v) {
+    if (Object.prototype.toString.call(v) === '[object Date]') return v.toISOString();
+    return v === null || v === undefined ? '' : String(v);
+  };
+  const rows = [];
+  sh.getRange(2, 1, last - 1, HEADERS.length).getValues().forEach(function (v) {
+    if (!v[ID_COL - 1] || !v[0]) return;
+    rows.push({
+      nombre: t(v[0]), giro: t(v[1]), segmento: t(v[2]), direccion: t(v[3]), municipio: t(v[4]),
+      telefono: t(v[5]), fuente: t(v[6]), tamano: t(v[7]),
+      consumo: typeof v[8] === 'number' ? v[8] : '', tarifa: t(v[9]), equipo: t(v[10]), turnos: t(v[11]),
+      estatus: t(v[14]), notas: t(v[15]), id: t(v[ID_COL - 1]), updated: t(v[17])
+    });
+  });
+  return { ok: true, rows: rows };
 }
 
 function getSheet_() {

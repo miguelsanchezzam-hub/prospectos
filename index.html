@@ -392,11 +392,11 @@
     <button type="button" class="btn primary" id="sSave">Guardar y probar</button>
   </div>
   <div class="btns">
-    <button type="button" class="btn" id="sSyncNow">Enviar ahora</button>
+    <button type="button" class="btn" id="sSyncNow">Sincronizar ahora</button>
     <button type="button" class="btn" id="sResend">Reenviar todo</button>
   </div>
   <hr>
-  <p class="note"><b>Respaldo.</b> Esta app guarda los datos en este dispositivo. Si cambias de teléfono o reinstalas el ícono, copia el respaldo antes y restáuralo después.</p>
+  <p class="note"><b>Sincronización.</b> Lo que calificas se manda a tu hoja y la app trae los cambios hechos en tus otros dispositivos al abrirla. Si dos dispositivos cambian el mismo prospecto, gana el cambio más reciente. <b>Respaldo.</b> Además puedes copiar un respaldo manual antes de reinstalar el ícono.</p>
   <div class="btns">
     <button type="button" class="btn" id="sBackup">Copiar respaldo</button>
   </div>
@@ -784,14 +784,14 @@
       var id = makeId(nombre, dir);
       if(byId(id)){ skipped++; return; }
       if(tel === "—" || tel === "-") tel = "";
-      store.prospects.push(blank({brand:brand, nombre:nombre, giro:giro, segmento:seg, direccion:dir,
+      addNew(blank({brand:brand, nombre:nombre, giro:giro, segmento:seg, direccion:dir,
         municipio:mun||MUN, telefono:tel, fuente:fte||FUENTE, tamano:normSize(tam)}));
       if(!firstBrand) firstBrand = brand;
       added++;
     });
     persist();
     if(firstBrand){ state.brand = firstBrand; state.size = "all"; state.estatus = "all"; state.q = ""; $("q").value = ""; }
-    closeSheets(); render();
+    closeSheets(); render(); if(added) scheduleSync();
     toast(added + " agregados" + (skipped ? " · " + skipped + " ya estaban" : ""));
   });
 
@@ -898,12 +898,13 @@
     var g = GIROS[state.brand], n = 0;
     found.forEach(function(c){
       if(!selected[c.placeId] || isKnown(c)) return;
-      store.prospects.push(blank({brand:state.brand, nombre:c.nombre, giro:lastGiro, segmento:g.segmento,
+      addNew(blank({brand:state.brand, nombre:c.nombre, giro:lastGiro, segmento:g.segmento,
         direccion:c.direccion, telefono:c.telefono, fuente:"Google Maps"}));
       n++;
     });
     persist(); state.size = "all"; state.estatus = "all"; state.q = ""; $("q").value = "";
-    closeSheets(); render(); toast(n + " agregados a tu lista. Toca «Calificar» para estimar el consumo.");
+    closeSheets(); render(); if(n) scheduleSync();
+    toast(n + " agregados a tu lista. Toca «Calificar» para estimar el consumo.");
   });
 
 
@@ -1082,7 +1083,7 @@
   $("btnSettings").addEventListener("click", openSettings);
   $("syncPill").addEventListener("click", function(){
     if(!cfg.url || !cfg.token) return openSettings();
-    syncNow(true);
+    syncAll(true);
   });
   function openSettings(){
     $("sUrl").value = cfg.url; $("sToken").value = cfg.token; $("sRestoreText").value = "";
@@ -1113,10 +1114,10 @@
     toast("Probando conexión…");
     apiPost({token:token, action:"ping"}).then(function(d){
       if(!d.ok) throw new Error(d.error || "El script rechazó la prueba");
-      lastError = ""; toast("Conectado a la pestaña «" + d.tab + "» (" + d.rows + " filas)." + (d.places === false ? " Falta PLACES_KEY para buscar nuevos." : "")); updateStatus(); scheduleSync();
+      lastError = ""; toast("Conectado a la pestaña «" + d.tab + "» (" + d.rows + " filas)." + (d.places === false ? " Falta PLACES_KEY para buscar nuevos." : "")); updateStatus(); scheduleFull();
     }).catch(function(e){ lastError = e.message; toast("No conectó: " + e.message); updateStatus(); });
   });
-  $("sSyncNow").addEventListener("click", function(){ closeSheets(); syncNow(true); });
+  $("sSyncNow").addEventListener("click", function(){ closeSheets(); syncAll(true); });
   $("sResend").addEventListener("click", function(){
     var n = 0; store.prospects.forEach(function(p){ if(p.touched){ p.dirty = true; n++; } });
     persist(); closeSheets(); render();
@@ -1160,6 +1161,50 @@
       if(manual) toast("No se pudo enviar: " + lastError);
     }).then(function(){ syncing = false; render(); });
   }
+
+
+  /* ============ Traer cambios de otros dispositivos (hoja → app) ============ */
+  var pulling = false, fullTimer = null;
+  var MERGE_FIELDS = ["giro","segmento","telefono","fuente","tamano","consumo","tarifa","equipo","turnos","estatus","notas"];
+  function mergeRemote(rows){
+    var added = 0, updated = 0;
+    rows.forEach(function(r){
+      if(!r || !r.id || !r.nombre) return;
+      var cur = byId(r.id), ru = String(r.updated || "");
+      if(!cur){
+        var isB = /abarrot/i.test(r.segmento || "") || /abarrot/i.test(r.giro || "");
+        var item = blank({brand:isB ? "bajio" : "wise", nombre:r.nombre, direccion:r.direccion, municipio:r.municipio});
+        item.id = r.id;
+        MERGE_FIELDS.forEach(function(k){ if(r[k] !== undefined && r[k] !== null) item[k] = r[k]; });
+        item.estatus = item.estatus || "Por contactar";
+        item.touched = true; item.dirty = false; item.updated = ru;
+        store.prospects.push(item); added++; return;
+      }
+      if(!ru || ru <= (cur.updated || "")) return;     // lo local es igual o más nuevo
+      MERGE_FIELDS.forEach(function(k){ if(r[k] !== undefined && r[k] !== null) cur[k] = r[k]; });
+      cur.estatus = cur.estatus || "Por contactar";
+      cur.touched = true; cur.dirty = false; cur.updated = ru; updated++;
+    });
+    return {added:added, updated:updated};
+  }
+  function pullNow(manual){
+    if(pulling || !cfg.url || !cfg.token || !navigator.onLine) return Promise.resolve();
+    pulling = true;
+    return apiPost({token:cfg.token, action:"pull"}).then(function(d){
+      if(!d.ok) throw new Error(d.error || "El script rechazó la solicitud");
+      var res = mergeRemote(d.rows || []);
+      if(res.added || res.updated){ persist(); render(); }
+      if(manual) toast(res.added || res.updated ? (res.added + " nuevos y " + res.updated + " actualizados desde la hoja") : "Ya estás al día con la hoja.");
+    }).catch(function(e){
+      if(manual) toast("No pude traer cambios: " + (e.message || "error de red"));
+    }).then(function(){ pulling = false; });
+  }
+  function syncAll(manual){ return syncNow(manual).then(function(){ return pullNow(manual); }); }
+  function scheduleFull(){
+    clearTimeout(fullTimer);
+    fullTimer = setTimeout(function(){ syncAll(false); }, 900);
+  }
+  function addNew(p){ p.touched = true; p.dirty = true; p.updated = nowIso(); store.prospects.push(p); }
 
   function updateStatus(){
     var pill = $("syncPill"), txt = $("syncText"), n = pendingList().length;
@@ -1215,14 +1260,14 @@
   });
   $("q").addEventListener("input", function(e){ state.q = e.target.value; render(); });
   $("fEstatus").addEventListener("change", function(e){ state.estatus = e.target.value; render(); });
-  window.addEventListener("online", function(){ updateStatus(); scheduleSync(); });
+  window.addEventListener("online", function(){ updateStatus(); scheduleFull(); });
   window.addEventListener("offline", updateStatus);
-  document.addEventListener("visibilitychange", function(){ if(!document.hidden) scheduleSync(); });
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) scheduleFull(); });
 
   loadAll();
   loadSeg();
   render();
-  scheduleSync();
+  scheduleFull();
 
   if("serviceWorker" in navigator){
     window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
