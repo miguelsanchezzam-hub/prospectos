@@ -56,6 +56,7 @@ function doPost(e) {
       });
     }
     if (body.action === 'buscar') return out_(buscar_(body));
+    if (body.action === 'seguimiento') return out_(seguimiento_());
     if (body.action !== 'upsert') return out_({ ok: false, error: 'Acción desconocida' });
 
     const lock = LockService.getScriptLock();
@@ -191,6 +192,99 @@ function buscar_(body) {
     places.push({ placeId: p.id, nombre: name, direccion: addr, telefono: tel });
   });
   return { ok: true, places: places, enHoja: enHoja, cerrados: cerrados, nextPageToken: data.nextPageToken || '' };
+}
+
+/* ================= Seguimiento (pipeline de tu documento de seguimiento) =================
+ * Lee la pestaña "Prospectos" de "Seguimiento_prospectos_mejorado" y se la manda a la app.
+ * Esos datos son privados: viajan solo con tu código secreto y se guardan solo en tu celular.
+ * Las columnas se reconocen por el NOMBRE del encabezado (no por su posición).
+ */
+const SEG_SHEET_ID = '1KlOZ33LTrAPMszSLMUBulWgQFGfV3UxvI1rCdIYkrMU';  // "Seguimiento_prospectos_mejorado"
+const SEG_TAB = 'Prospectos';
+const SEG_RULES = [
+  ['encargado', /encargad|responsable|due[nñ]o/],
+  ['negocio', /negocio|nombre|prospecto/],
+  ['comPond', /ponderad/],
+  ['comision', /comisi/],
+  ['contacto', /tel[eé]fono|contacto|celular|whats/],
+  ['zona', /zona/],
+  ['tipo', /tipo|giro|segmento/],
+  ['etapa', /etapa|estatus|estado/],
+  ['recibo', /recibo|pago.*luz/],
+  ['precio', /precio|inversi|monto|cotiza/],
+  ['prob', /probab/],
+  ['objecion', /objeci/],
+  ['fechaSig', /fecha/],
+  ['sigPaso', /(siguiente|pr[oó]ximo).*(paso|acci)|^acci[oó]n/],
+  ['comentarios', /comentario|nota|observ/]
+];
+
+function segMap_(row) {
+  const map = {}, taken = {};
+  row.forEach(function (h, i) {
+    const t = norm_(h);
+    if (!t) return;
+    for (let k = 0; k < SEG_RULES.length; k++) {
+      const key = SEG_RULES[k][0];
+      if (!taken[key] && SEG_RULES[k][1].test(t)) { map[key] = i; taken[key] = 1; break; }
+    }
+  });
+  return map;
+}
+function segNum_(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  if (typeof v === 'number') return v;
+  const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+  return isFinite(n) ? n : null;
+}
+function segDate_(v) {
+  if (!v) return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[1] + '-' + m[2] + '-' + m[3];
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+  return '';
+}
+function segText_(v) { return v === null || v === undefined ? '' : String(v).trim(); }
+
+function seguimiento_() {
+  const ss = SpreadsheetApp.openById(SEG_SHEET_ID);
+  const sh = ss.getSheetByName(SEG_TAB);
+  if (!sh) return { ok: false, error: 'No encontré la pestaña «' + SEG_TAB + '» en el documento de seguimiento' };
+  const data = sh.getDataRange().getValues();
+  let hi = -1, map = null;
+  for (let i = 0; i < Math.min(10, data.length); i++) {
+    const m = segMap_(data[i]);
+    if (Object.keys(m).length >= 3 && m.negocio !== undefined) { hi = i; map = m; break; }
+  }
+  if (hi < 0 || map.etapa === undefined) {
+    return { ok: false, error: 'No reconocí los encabezados (necesito al menos Negocio y Etapa). Primera fila: ' + data[0].filter(String).slice(0, 12).join(' | ') };
+  }
+  const get = function (r, k) { return map[k] === undefined ? '' : r[map[k]]; };
+  const rows = [];
+  for (let i = hi + 1; i < data.length; i++) {
+    const r = data[i];
+    const negocio = segText_(get(r, 'negocio'));
+    if (!negocio) continue;
+    let prob = segNum_(get(r, 'prob'));
+    if (prob !== null && prob > 0 && prob <= 1) prob = Math.round(prob * 100);
+    const comision = segNum_(get(r, 'comision'));
+    let pond = segNum_(get(r, 'comPond'));
+    if (pond === null && comision !== null && prob !== null) pond = comision * prob / 100;
+    rows.push({
+      negocio: negocio, encargado: segText_(get(r, 'encargado')), contacto: segText_(get(r, 'contacto')),
+      zona: segText_(get(r, 'zona')), tipo: segText_(get(r, 'tipo')), etapa: segText_(get(r, 'etapa')) || 'Sin contactar',
+      recibo: segNum_(get(r, 'recibo')), precio: segNum_(get(r, 'precio')), comision: comision, prob: prob, comPond: pond,
+      objecion: segText_(get(r, 'objecion')), fechaSig: segDate_(get(r, 'fechaSig')), sigPaso: segText_(get(r, 'sigPaso')),
+      comentarios: segText_(get(r, 'comentarios'))
+    });
+  }
+  const faltan = SEG_RULES.map(function (x) { return x[0]; }).filter(function (k) { return map[k] === undefined; });
+  return { ok: true, rows: rows, faltan: faltan };
 }
 
 function getSheet_() {
