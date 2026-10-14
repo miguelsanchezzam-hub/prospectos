@@ -306,7 +306,33 @@ function seguimiento_() {
     });
   }
   const faltan = SEG_RULES.map(function (x) { return x[0]; }).filter(function (k) { return map[k] === undefined; });
-  return { ok: true, rows: rows, faltan: faltan };
+  const res = { ok: true, rows: rows, faltan: faltan };
+  try { Object.assign(res, panelExtra_(ss)); } catch (e) {}
+  return res;
+}
+
+// Meta mensual (Listas) y actividad semanal (meta contra real), para el panel de la app.
+function panelExtra_(ss) {
+  const out = { meta: null, semanas: [] };
+  const li = ss.getSheetByName('Listas');
+  if (li) {
+    const v = segNum_(li.getRange('B8').getValue());
+    if (v) out.meta = v;
+  }
+  const ac = ss.getSheetByName('Actividad semanal');
+  if (ac) {
+    const d = ac.getDataRange().getValues();
+    let hi = -1;
+    for (let i = 0; i < Math.min(10, d.length); i++) if (norm_(d[i][0]) === 'semana') { hi = i; break; }
+    if (hi >= 0) {
+      for (let i = hi + 1; i < d.length; i++) {
+        const n = segNum_(d[i][0]);
+        if (n === null || !/^\s*\d+\s*$/.test(String(d[i][0]))) break;
+        out.semanas.push({ n: n, fechas: segText_(d[i][1]), vMeta: segNum_(d[i][2]), vReal: segNum_(d[i][3]), eMeta: segNum_(d[i][5]), eReal: segNum_(d[i][6]) });
+      }
+    }
+  }
+  return out;
 }
 
 // Devuelve todo lo guardado en "App prospectos" para que otros dispositivos se pongan al día.

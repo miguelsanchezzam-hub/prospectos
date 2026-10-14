@@ -201,6 +201,38 @@
   .kpi b{display:block; font-size:24px; line-height:1.1; font-weight:800; letter-spacing:-.01em;}
   .kpi span{display:block; margin-top:4px; font-size:12px; font-weight:600; color:var(--ink-soft);}
   .kpi.good b{color:var(--ok);} .kpi.bad b{color:var(--err);}
+  .pn-head{background:#2F2F2F; color:#fff; padding:14px 16px; border-radius:12px 12px 0 0; margin-top:14px; font-size:18px;}
+  .pn-stripe{height:5px; background:#F5A623;}
+  .pn-note{margin:0; padding:9px 16px; background:#FDF1E7; color:#595959; font-size:12px; border-radius:0 0 12px 12px;}
+  .pn-kpis{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 4px;}
+  @media(min-width:700px){.pn-kpis{grid-template-columns:repeat(4,1fr);}}
+  .pn-kpi{background:#fff; border:1px solid #E6E6E6; border-radius:10px; padding:12px; min-width:0;}
+  .pn-kpi i{display:block; font-style:normal; font-size:9.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#7F7F7F;}
+  .pn-kpi b{display:block; margin:6px 0 4px; font-size:21px; line-height:1.1; font-weight:800; color:#2F2F2F; overflow-wrap:anywhere;}
+  .pn-kpi span{display:block; font-size:11px; color:#7F7F7F; line-height:1.3;}
+  .pn-h{margin:22px 0 8px; padding-bottom:5px; border-bottom:2px solid #F5A623; font-size:14px; font-weight:800; color:#2F2F2F;}
+  .pn-cols{display:flex; align-items:flex-end; gap:4px; height:158px; border-bottom:1px solid #D9D9D9;}
+  .pn-col{flex:1; min-width:0; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%; position:relative;}
+  .pn-col .v{font-size:10px; font-weight:700; color:#2F2F2F; margin-bottom:2px;}
+  .pn-col .bar{width:100%; max-width:34px; border-radius:3px 3px 0 0; display:block;}
+  .pn-col .l{position:absolute; top:100%; margin-top:4px; font-size:9px; color:#595959; text-align:center; width:100%; line-height:1.1; overflow-wrap:anywhere;}
+  .pn-cols{margin-bottom:38px;}
+  .pn-weeks{margin-bottom:2px;}
+  .pn-weeks{display:flex; align-items:flex-end; gap:3px; height:112px; border-bottom:1px solid #D9D9D9;}
+  .pn-wk{flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative;}
+  .pn-wk .pair{display:flex; align-items:flex-end; gap:1px; width:100%; justify-content:center;}
+  .pn-wk .bar{display:block; width:42%; max-width:10px; border-radius:2px 2px 0 0; min-height:1px;}
+  .pn-wk .l{position:absolute; top:100%; margin-top:3px; font-size:9px; color:#595959;}
+  .pn-legend{display:flex; gap:14px; margin-top:22px; font-size:11px; color:#595959; align-items:center;}
+  .pn-legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px;}
+  .pn-legend .mut{margin-left:auto; color:#9E9E9E;}
+  .pn-donut{display:flex; gap:16px; align-items:center;}
+  .pn-donut .ring{width:110px; height:110px; border-radius:50%; position:relative; flex:none;}
+  .pn-donut .ring::after{content:""; position:absolute; inset:24px; background:var(--bg,#fff); border-radius:50%;}
+  .pn-donut .ring span{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; z-index:1;}
+  .pn-donut .lg{font-size:13px; display:flex; flex-direction:column; gap:5px;}
+  .pn-donut .lg i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:7px;}
+  #segBody .bar-row .fill{background:#E8710A;}
   .seg-h{margin:24px 0 10px; font-size:16px; font-weight:800;}
   .bars{display:flex; flex-direction:column; gap:7px;}
   .bar-row{display:grid; grid-template-columns:minmax(96px,38%) 1fr 28px; gap:8px; align-items:center; font-size:13px;}
@@ -944,7 +976,7 @@
     segState.loading = true; segState.err = ""; renderSeg();
     apiPost({token:cfg.token, action:"seguimiento"}).then(function(d){
       if(!d.ok) throw new Error(d.error || "El script rechazó la solicitud");
-      seg = {rows:d.rows || [], at:nowIso()}; saveSeg();
+      seg = {rows:d.rows || [], at:nowIso(), meta:d.meta || null, semanas:d.semanas || []}; saveSeg();
       if(d.faltan && d.faltan.indexOf("etapa") === -1 && d.faltan.length > 8) toast("Ojo: reconocí pocas columnas del documento.");
     }).catch(function(e){ segState.err = e.message || "Error de red"; })
       .then(function(){ segState.loading = false; renderSeg(); });
@@ -963,6 +995,44 @@
   function countBy(rows, key){
     var m = {}; rows.forEach(function(r){ var k = r[key]; if(!k) return; m[k] = (m[k]||0) + 1; });
     return Object.keys(m).map(function(k){ return [k, m[k]]; }).sort(function(a,b){ return b[1]-a[1]; });
+  }
+  function colChart(items, fmt){
+    var max = 1; items.forEach(function(i){ if(i.v > max) max = i.v; });
+    var w = el("div","pn-cols");
+    items.forEach(function(i){
+      var c = el("div","pn-col"); c.appendChild(el("span","v", i.v ? fmt(i.v) : "0"));
+      var bar = el("span","bar"); bar.style.height = Math.max(i.v ? 3 : 0, Math.round(i.v/max*100)) + "px"; bar.style.background = i.c; c.appendChild(bar);
+      c.appendChild(el("span","l", i.l)); w.appendChild(c);
+    });
+    return w;
+  }
+  function weekChart(sem, km, kr, color){
+    var max = 1; sem.forEach(function(s){ max = Math.max(max, s[km]||0, s[kr]||0); });
+    var w = el("div","pn-weeks");
+    sem.forEach(function(s){
+      var c = el("div","pn-wk"), pair = el("div","pair");
+      [[s[km],"#BDBDBD"],[s[kr],color]].forEach(function(p){
+        var b = el("span","bar"); b.style.height = Math.round((p[0]||0)/max*90) + "px"; b.style.background = p[1];
+        b.title = String(p[0] == null ? "" : p[0]); pair.appendChild(b);
+      });
+      c.appendChild(pair); c.appendChild(el("span","l", String(s.n)));
+      c.title = "Semana " + s.n + (s.fechas ? " (" + s.fechas + ")" : "") + ": meta " + (s[km]==null?"—":s[km]) + ", real " + (s[kr]==null?"—":s[kr]);
+      w.appendChild(c);
+    });
+    var box = el("div"); box.appendChild(w);
+    var lg = el("div","pn-legend");
+    lg.innerHTML = '<span><i style="background:#BDBDBD"></i>Meta</span><span><i style="background:' + color + '"></i>Real</span><span class="mut">Semana →</span>';
+    box.appendChild(lg); return box;
+  }
+  var PAL = ["#E8710A","#2E75B6","#27A69A","#F2B705","#9575CD","#D95250"];
+  function donut(items){
+    var tot = items.reduce(function(s,i){ return s + i[1]; }, 0) || 1, acc = 0, parts = [];
+    items.forEach(function(i,n){ var a = acc/tot*100; acc += i[1]; parts.push(PAL[n % PAL.length] + " " + a + "% " + (acc/tot*100) + "%"); });
+    var w = el("div","pn-donut"), d = el("div","ring"); d.style.background = "conic-gradient(" + parts.join(",") + ")";
+    d.appendChild(el("span",null,String(tot))); w.appendChild(d);
+    var lg = el("div","lg");
+    items.forEach(function(i,n){ var r = el("div"); r.innerHTML = '<i style="background:' + PAL[n % PAL.length] + '"></i>'; r.appendChild(document.createTextNode(i[0] + ": " + i[1] + " (" + Math.round(i[1]/tot*100) + "%)")); lg.appendChild(r); });
+    w.appendChild(lg); return w;
   }
   function firstPhone(t){
     var first = String(t||"").split("/")[0], d = first.replace(/[^0-9+]/g,"");
@@ -985,22 +1055,57 @@
         : "Conecta el Apps Script en Ajustes y toca «Actualizar» para traer tu documento de seguimiento."));
       return;
     }
-    var perdidos = rows.filter(function(r){ return r.etapa === "Perdido"; }).length;
+    var cnt = {}; rows.forEach(function(r){ cnt[r.etapa] = (cnt[r.etapa]||0) + 1; });
+    var counts = cnt;
+    var ordered = ETAPAS.filter(function(e){ return cnt[e]; }).concat(Object.keys(cnt).filter(function(e){ return ETAPAS.indexOf(e) === -1; }));
+    var total = rows.length, sinC = cnt["Sin contactar"]||0, pausa = cnt["En pausa"]||0, ganados = cnt["Ganado"]||0, perdidos = cnt["Perdido"]||0;
+    var proceso = ["Contactado","Visita hecha","Recibo recibido","Estimado enviado","Crédito / negociación"].reduce(function(n,e){ return n + (cnt[e]||0); }, 0);
     var abiertos = rows.filter(function(r){ return r.etapa !== "Perdido"; });
-    var pond = abiertos.reduce(function(s,r){ return s + (r.comPond || 0); }, 0);
-    var abierta = abiertos.reduce(function(s,r){ return s + (r.comision || 0); }, 0);
+    var sum = function(list, f){ return list.reduce(function(s,r){ return s + (f(r) || 0); }, 0); };
+    var cerrada = sum(rows.filter(function(r){ return r.etapa === "Ganado"; }), function(r){ return r.comision; });
+    var pond = sum(abiertos, function(r){ return r.comPond; });
+    var abierta = sum(abiertos.filter(function(r){ return r.etapa !== "Ganado"; }), function(r){ return r.comision; });
+    var meta = seg.meta || 150000, avance = meta ? Math.round(cerrada/meta*100) : 0;
 
-    var k = el("div","kpis");
-    [["En la lista", rows.length, ""],["Activos", abiertos.length, ""],["Perdidos", perdidos, "bad"],["Pronóstico ponderado", mxn(Math.round(pond)), "good"]].forEach(function(x){
-      var c = el("div","kpi " + x[2]); c.appendChild(el("b",null,String(x[1]))); c.appendChild(el("span",null,x[0])); k.appendChild(c);
+    var hd = el("div","pn-head"); hd.appendChild(el("b",null,"Panel de seguimiento")); body.appendChild(hd);
+    body.appendChild(el("div","pn-stripe"));
+    body.appendChild(el("p","pn-note","Se actualiza con lo que captures en tu documento de seguimiento. Cifras en pesos mexicanos (MXN)."));
+
+    var k = el("div","pn-kpis");
+    [["Prospectos en la lista", total, "Total en el control"],
+     ["Ya contactados", total - sinC, "Sin contactar: " + sinC],
+     ["En proceso", proceso, "En pausa: " + pausa],
+     ["Ganados", ganados, "Perdidos: " + perdidos],
+     ["Comisión cerrada", mxn(Math.round(cerrada)), "Avance vs meta: " + avance + "%"],
+     ["Meta de comisión mensual", mxn(meta), "Meta a 24 meses"],
+     ["Pronóstico ponderado", mxn(Math.round(pond)), "Cerrado + abiertos por probabilidad"],
+     ["Comisión potencial abierta", mxn(Math.round(abierta)), "Si todos los abiertos cerraran"]].forEach(function(x){
+      var c = el("div","pn-kpi"); c.appendChild(el("i",null,x[0])); c.appendChild(el("b",null,String(x[1]))); c.appendChild(el("span",null,x[2])); k.appendChild(c);
     });
     body.appendChild(k);
-    body.appendChild(el("p","note","Comisión potencial abierta: " + mxn(Math.round(abierta)) + " si cerraran todos los activos."));
 
-    var counts = {}; rows.forEach(function(r){ counts[r.etapa] = (counts[r.etapa]||0) + 1; });
-    var ordered = ETAPAS.filter(function(e){ return counts[e]; }).concat(Object.keys(counts).filter(function(e){ return ETAPAS.indexOf(e) === -1; }));
-    body.appendChild(el("h2","seg-h","Embudo por etapa"));
-    body.appendChild(barList(ordered.map(function(e){ return [e, counts[e]]; })));
+    var SHORT = {"Sin contactar":"Sin cont.","Contactado":"Contac.","Visita hecha":"Visita","Recibo recibido":"Recibo","Estimado enviado":"Estim.","Crédito / negociación":"Crédito","Ganado":"Ganado","Perdido":"Perdido","En pausa":"Pausa"};
+    var COL = {"Sin contactar":"#9E9E9E","Contactado":"#5B9BD5","Visita hecha":"#2E75B6","Recibo recibido":"#27A69A","Estimado enviado":"#F2B705","Crédito / negociación":"#ED7D31","Ganado":"#43A047","Perdido":"#D95250","En pausa":"#9575CD"};
+    var comEt = {}; rows.forEach(function(r){ comEt[r.etapa] = (comEt[r.etapa]||0) + (r.comision||0); });
+    body.appendChild(el("h2","pn-h","Prospectos por etapa"));
+    body.appendChild(colChart(ETAPAS.map(function(e){ return {l:SHORT[e], v:cnt[e]||0, c:COL[e]}; }), function(v){ return String(v); }));
+    body.appendChild(el("h2","pn-h","Comisión por etapa (MXN)"));
+    body.appendChild(colChart(ETAPAS.map(function(e){ return {l:SHORT[e], v:Math.round(comEt[e]||0), c:COL[e]}; }), function(v){ return v >= 1000 ? Math.round(v/1000) + "k" : String(v); }));
+
+    var objs = countBy(rows, "objecion").slice(0,8);
+    if(objs.length){ body.appendChild(el("h2","pn-h","Objeciones principales")); body.appendChild(barList(objs)); }
+    var tipos = countBy(rows, "tipo");
+    if(tipos.length){ body.appendChild(el("h2","pn-h","Prospectos por tipo")); body.appendChild(donut(tipos)); }
+    var zonas = countBy(rows, "zona").slice(0,8);
+    if(zonas.length){ body.appendChild(el("h2","pn-h","Por zona")); body.appendChild(barList(zonas)); }
+
+    if(seg.semanas && seg.semanas.length){
+      var sem = seg.semanas;
+      body.appendChild(el("h2","pn-h","Visitas por semana: meta contra real"));
+      body.appendChild(weekChart(sem, "vMeta", "vReal", "#E8710A"));
+      body.appendChild(el("h2","pn-h","Estimados por semana: meta contra real"));
+      body.appendChild(weekChart(sem, "eMeta", "eReal", "#2E75B6"));
+    }
 
     // Próximos pasos (sin los perdidos)
     var today = new Date(); today.setHours(0,0,0,0);
@@ -1008,7 +1113,7 @@
       var d = new Date(r.fechaSig + "T00:00:00");
       return {r:r, d:d, days:Math.round((d - today)/86400000)};
     }).filter(function(x){ return !isNaN(x.d.getTime()); }).sort(function(a,b){ return a.d - b.d; });
-    body.appendChild(el("h2","seg-h","Próximos pasos (" + ag.length + ")"));
+    body.appendChild(el("h2","pn-h","Resumen del día: próximos pasos (" + ag.length + ")"));
     if(!ag.length) body.appendChild(el("div","seg-empty","Ningún prospecto activo tiene fecha de siguiente paso."));
     var shown = segState.all ? ag : ag.slice(0,10);
     var agBox = el("div"); 
@@ -1030,12 +1135,8 @@
       body.appendChild(mb);
     }
 
-    var zonas = countBy(rows, "zona").slice(0,8), objs = countBy(rows, "objecion").slice(0,6);
-    if(zonas.length){ body.appendChild(el("h2","seg-h","Por zona")); body.appendChild(barList(zonas)); }
-    if(objs.length){ body.appendChild(el("h2","seg-h","Objeciones principales")); body.appendChild(barList(objs, true)); }
-
     // Lista con búsqueda y filtro
-    body.appendChild(el("h2","seg-h","Lista completa"));
+    body.appendChild(el("h2","pn-h","Lista completa"));
     var ctr = el("div","controls");
     var sw = el("div","search"), inp = el("input"); inp.type = "search"; inp.id = "segQ"; inp.placeholder = "Buscar por negocio, encargado o teléfono…"; inp.value = segState.q; inp.autocomplete = "off";
     sw.appendChild(inp); ctr.appendChild(sw);
