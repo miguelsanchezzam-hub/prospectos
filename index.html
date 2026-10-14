@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prospectos</title>
+<meta name="theme-color" content="#FFFFFF" id="themeColor">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Prospectos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+  :root{
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+
+    /* Bajío Sustentable: blanco dominante, dorado/amarillo/lima de la presentación */
+    --b-bg:#FFFFFF;
+    --b-ink:#241A12;
+    --b-ink-soft:#6A5D4E;
+    --b-line:#EFE6CC;
+    --b-wash:#FFFAE8;
+    --b-a1:#FFD400;
+    --b-a2:#E0A100;
+    --b-a3:#F5781C;
+    --b-lime:#8DC63F;
+
+    /* Wise Solar Energy: azul/naranja del logo */
+    --w-bg:#FFFFFF;
+    --w-ink:#0E2338;
+    --w-ink-soft:#4C6479;
+    --w-line:#D9E4EE;
+    --w-wash:#F2F7FC;
+    --w-a1:#2E86DE;
+    --w-a2:#1C4E86;
+    --w-a3:#F5921C;
+
+    --bg:var(--b-bg); --ink:var(--b-ink); --ink-soft:var(--b-ink-soft);
+    --line:var(--b-line); --wash:var(--b-wash);
+    --a1:var(--b-a1); --a2:var(--b-a2); --a3:var(--b-a3);
+    --chip-on-bg:var(--b-a2); --chip-on-ink:#241A12;
+    --ok:#3D8B1F; --warn:#B26A00; --err:#B3261E;
+  }
+  body[data-brand="wise"]{
+    --bg:var(--w-bg); --ink:var(--w-ink); --ink-soft:var(--w-ink-soft);
+    --line:var(--w-line); --wash:var(--w-wash);
+    --a1:var(--w-a1); --a2:var(--w-a2); --a3:var(--w-a3);
+    --chip-on-bg:var(--w-a2); --chip-on-ink:#FFFFFF;
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--font); -webkit-font-smoothing:antialiased;
+    transition:background .3s ease, color .3s ease;
+  }
+  button,input,select,textarea{font-family:inherit;color:inherit;}
+  button{cursor:pointer;}
+
+  .shell{
+    max-width:760px; margin:0 auto;
+    padding:calc(14px + env(safe-area-inset-top)) 16px calc(56px + env(safe-area-inset-bottom));
+  }
+
+  /* ---------- Marca ---------- */
+  .switcher{
+    display:flex; border:1.5px solid var(--line); border-radius:14px; overflow:hidden; background:#fff;
+  }
+  .switcher button{
+    flex:1 1 50%; display:flex; align-items:center; justify-content:center; gap:9px;
+    padding:13px 8px; border:0; background:transparent; font-size:14px; font-weight:600;
+    color:var(--ink-soft); position:relative; min-height:48px;
+  }
+  .switcher button + button{border-left:1.5px solid var(--line);}
+  .switcher button[aria-pressed="true"]{color:var(--ink);}
+  .switcher button[aria-pressed="true"]::after{
+    content:""; position:absolute; left:14px; right:14px; bottom:0; height:3px; border-radius:3px 3px 0 0;
+  }
+  .switcher button[data-target="bajio"][aria-pressed="true"]::after{background:linear-gradient(90deg,var(--b-a1),var(--b-a3),var(--b-lime));}
+  .switcher button[data-target="wise"][aria-pressed="true"]::after{background:linear-gradient(90deg,var(--w-a1),var(--w-a2),var(--w-a3));}
+  .mark{width:24px;height:24px;flex:none;}
+
+  .hero{padding:22px 0 16px; border-bottom:1.5px solid var(--line);}
+  .hero h1{margin:0 0 6px; font-size:clamp(22px,6vw,30px); line-height:1.12; font-weight:800; letter-spacing:-.015em;}
+  .hero p{margin:0; color:var(--ink-soft); font-size:14.5px; line-height:1.5; max-width:52ch;}
+  .stats{display:flex; gap:22px; margin-top:16px; align-items:flex-end;}
+  .stat b{display:block; font-size:34px; line-height:1; font-weight:800; letter-spacing:-.02em;}
+  .stat span{display:block; margin-top:4px; font-size:12px; font-weight:600; color:var(--ink-soft);}
+  .stat i{display:block; height:4px; width:34px; border-radius:2px; margin-top:8px; background:linear-gradient(90deg,var(--a1),var(--a3));}
+  body[data-brand="wise"] .stat i{background:linear-gradient(90deg,var(--a1),var(--a2));}
+
+  /* ---------- Barra de acciones ---------- */
+  .actions{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 4px; align-items:center;}
+  .pill{
+    display:inline-flex; align-items:center; gap:7px; min-height:38px; padding:0 13px;
+    border-radius:999px; border:1.5px solid var(--line); background:#fff; font-size:13px; font-weight:600;
+  }
+  .pill .dot{width:9px;height:9px;border-radius:50%;background:var(--ink-soft);flex:none;}
+  .pill.ok .dot{background:var(--ok);} .pill.warn .dot{background:var(--a3);} .pill.err .dot{background:var(--err);}
+  .pill.busy .dot{animation:pulse 1s ease-in-out infinite;}
+  @keyframes pulse{50%{opacity:.25;}}
+  .spacer{flex:1 1 auto;}
+  .linkbtn{border:0;background:transparent;font-size:13px;font-weight:700;color:var(--a2);padding:9px 6px;min-height:38px;}
+  body[data-brand="bajio"] .linkbtn{color:#8A6400;}
+
+  /* ---------- Filtros ---------- */
+  .controls{display:flex; flex-wrap:wrap; gap:10px; margin:12px 0 14px;}
+  .search{flex:1 1 100%; display:flex; align-items:center; gap:8px; border:1.5px solid var(--line); border-radius:12px; background:#fff; padding:0 12px;}
+  .search input{border:0; outline:0; background:transparent; font-size:16px; padding:12px 0; width:100%;}
+  .search svg{flex:none; opacity:.5;}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; flex:1 1 auto;}
+  .chip{
+    border:1.5px solid var(--line); background:#fff; color:var(--ink-soft); font-size:13px; font-weight:600;
+    padding:0 14px; min-height:38px; border-radius:999px;
+  }
+  .chip[aria-pressed="true"]{background:var(--chip-on-bg); color:var(--chip-on-ink); border-color:transparent;}
+  .select{border:1.5px solid var(--line); background:#fff; border-radius:999px; font-size:13px; font-weight:600; min-height:38px; padding:0 12px;}
+
+  /* ---------- Lista ---------- */
+  .list{border-top:1.5px solid var(--line);}
+  .row{display:grid; grid-template-columns:5px 1fr; column-gap:12px; padding:14px 2px; border-bottom:1.5px solid var(--line);}
+  .row .bar{border-radius:3px; grid-row:1;}
+  .row .body{min-width:0; display:flex; flex-direction:column; gap:6px;}
+  .row.dim .name{text-decoration:line-through; opacity:.5;}
+  .row.dim .addr,.row.dim .meta{opacity:.5;}
+  .line1{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .name{margin:0; font-size:15.5px; font-weight:700; line-height:1.3; min-width:0; overflow-wrap:anywhere;}
+  .tag{flex:none; font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px; border:1.5px solid var(--line); color:var(--ink-soft); white-space:nowrap;}
+  .addr{margin:0; font-size:13px; color:var(--ink-soft); line-height:1.4; overflow-wrap:anywhere;}
+  .meta{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; font-size:13px;}
+  .meta a{color:var(--ink); font-weight:600; text-decoration:none; border-bottom:1.5px solid var(--line);}
+  .meta .nophone{color:var(--ink-soft);}
+  .badge{font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--wash); color:var(--ink);}
+  .badge.alta{background:#E4F3D3; color:#2C6A12;}
+  .badge.media{background:#FFF1C2; color:#7A5300;}
+  .badge.baja{background:#EEF0F2; color:#5A6672;}
+  .foot{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:2px;}
+  .foot label{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft); min-height:36px; cursor:pointer; user-select:none;}
+  .foot input[type=checkbox]{width:20px; height:20px; accent-color:var(--a2);}
+  .qualify{border:1.5px solid var(--line); background:#fff; border-radius:10px; font-size:13px; font-weight:700; min-height:36px; padding:0 14px;}
+  .empty{padding:40px 10px; text-align:center; color:var(--ink-soft); font-size:14px;}
+
+  /* ---------- Hojas inferiores ---------- */
+  .backdrop{position:fixed; inset:0; background:rgba(36,26,18,.38); opacity:0; pointer-events:none; transition:opacity .2s; z-index:20;}
+  .backdrop.open{opacity:1; pointer-events:auto;}
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:21; background:#fff; margin:0 auto; max-width:620px;
+    border-radius:18px 18px 0 0; max-height:92vh; max-height:92dvh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding:18px 16px calc(22px + env(safe-area-inset-bottom));
+    transform:translateY(105%); visibility:hidden; transition:transform .25s ease, visibility 0s linear .25s;
+    box-shadow:0 -10px 40px rgba(0,0,0,.18);
+  }
+  .sheet.open{transform:none; visibility:visible; transition:transform .25s ease, visibility 0s;}
+  .sheet h2{margin:0 0 4px; font-size:18px; font-weight:800; line-height:1.25; overflow-wrap:anywhere;}
+  .sheet .sub{margin:0 0 14px; font-size:13px; color:var(--ink-soft); line-height:1.45;}
+  .sheet .sub a{color:var(--ink); font-weight:600;}
+  .field{display:flex; flex-direction:column; gap:6px; margin-bottom:13px;}
+  .field label{font-size:12.5px; font-weight:700; color:var(--ink-soft);}
+  .field input,.field select,.field textarea{
+    width:100%; border:1.5px solid var(--line); border-radius:10px; background:#fff; padding:11px 12px; font-size:16px; min-height:46px;
+  }
+  .field textarea{min-height:84px; resize:vertical;}
+  .field .hint{font-size:12px; color:var(--ink-soft); line-height:1.4;}
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .scorebox{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border-radius:12px; background:var(--wash); margin-bottom:14px; font-size:14px; font-weight:700;}
+  .scorebox small{display:block; font-size:11.5px; font-weight:600; color:var(--ink-soft);}
+  .btns{display:flex; gap:10px; margin-top:6px;}
+  .btn{flex:1; border-radius:12px; border:1.5px solid var(--line); background:#fff; font-size:15px; font-weight:700; min-height:48px; padding:0 14px;}
+  .btn.primary{background:var(--chip-on-bg); color:var(--chip-on-ink); border-color:transparent;}
+  .btn.danger{color:var(--err);}
+  .sheet hr{border:0; border-top:1.5px solid var(--line); margin:18px 0;}
+  .sheet .note{font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 12px;}
+  .cand{display:flex; gap:12px; align-items:flex-start; padding:12px 2px; border-top:1.5px solid var(--line); cursor:pointer;}
+  .cand input{width:22px; height:22px; margin-top:2px; accent-color:var(--a2); flex:none;}
+  .cand .c-body{min-width:0; flex:1;}
+  .cand .c-name{margin:0; font-size:15px; font-weight:700; line-height:1.3; overflow-wrap:anywhere;}
+  .cand .c-addr{margin:3px 0 0; font-size:12.5px; color:var(--ink-soft); line-height:1.4; overflow-wrap:anywhere;}
+  .cand .c-tel{margin:3px 0 0; font-size:12.5px; font-weight:600;}
+  textarea.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; min-height:150px;}
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); transform:translate(-50%,20px);
+    background:#241A12; color:#fff; padding:11px 16px; border-radius:12px; font-size:13.5px; font-weight:600;
+    max-width:calc(100% - 32px); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:30; text-align:center;
+  }
+  .toast.show{opacity:1; transform:translate(-50%,0);}
+
+  @media (min-width:600px){ .search{flex:1 1 260px;} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important;} }
+</style>
+</head>
+<body data-brand="bajio">
+<div class="shell">
+
+  <div class="switcher" role="group" aria-label="Elegir marca">
+    <button type="button" data-target="bajio" aria-pressed="true">
+      <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
+        <defs><radialGradient id="sunG" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#E0241E"/><stop offset="45%" stop-color="#F5781C"/><stop offset="100%" stop-color="#FFD400"/>
+        </radialGradient></defs>
+        <circle cx="20" cy="20" r="18" fill="url(#sunG)"/>
+      </svg>
+      Bajío Sustentable
+    </button>
+    <button type="button" data-target="wise" aria-pressed="false">
+      <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
+        <defs><linearGradient id="panG" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#5AA9E6"/><stop offset="100%" stop-color="#1C4E86"/>
+        </linearGradient></defs>
+        <polygon points="4,30 14,6 30,6 24,30" fill="url(#panG)"/>
+        <line x1="8" y1="24" x2="27" y2="24" stroke="#fff" stroke-width="1"/>
+        <line x1="10.5" y1="16" x2="28.5" y2="16" stroke="#fff" stroke-width="1"/>
+        <circle cx="33" cy="9" r="4.2" fill="#F5921C"/>
+      </svg>
+      Wise Solar Energy
+    </button>
+  </div>
+
+  <section class="hero">
+    <h1 id="heroTitle"></h1>
+    <p id="heroSub"></p>
+    <div class="stats">
+      <div class="stat"><b id="statShown">0</b><span>en esta vista</span><i></i></div>
+      <div class="stat"><b id="statRated">0</b><span>calificados</span></div>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button type="button" class="pill" id="syncPill" aria-live="polite"><span class="dot"></span><span id="syncText">…</span></button>
+    <span class="spacer"></span>
+    <button type="button" class="linkbtn" id="btnSearch">Buscar nuevos</button>
+    <button type="button" class="linkbtn" id="btnImport">Importar</button>
+    <button type="button" class="linkbtn" id="btnSettings">Ajustes</button>
+  </div>
+
+  <div class="controls">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="q" type="search" placeholder="Buscar por nombre o colonia…" autocomplete="off" aria-label="Buscar">
+    </div>
+    <div class="chips" id="chips"></div>
+    <select class="select" id="fEstatus" aria-label="Filtrar por estatus"></select>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+
+<!-- Calificar -->
+<div class="sheet" id="sheetDetail" role="dialog" aria-modal="true" aria-labelledby="dName">
+  <h2 id="dName"></h2>
+  <p class="sub" id="dSub"></p>
+  <div class="field">
+    <label for="dTamano">Tamaño estimado</label>
+    <select id="dTamano"></select>
+  </div>
+  <div class="two">
+    <div class="field">
+      <label for="dConsumo">Consumo (kWh/mes)</label>
+      <input id="dConsumo" type="text" inputmode="decimal" placeholder="Ej. 500" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="dTarifa">Tarifa CFE</label>
+      <select id="dTarifa"></select>
+    </div>
+  </div>
+  <div class="field"><span class="hint" id="dHint"></span></div>
+  <div class="scorebox"><div>Puntaje <span id="dScore">—</span><small>Mismo cálculo de la hoja: consumo ÷ 2,000, entre 1 y 5</small></div><span class="badge" id="dPrio">Sin dato</span></div>
+  <div class="field">
+    <label for="dEquipo">¿Refrigeración, AC o motores grandes?</label>
+    <input id="dEquipo" type="text" placeholder="Ej. 3 refrigeradores y cuarto frío" autocomplete="off">
+  </div>
+  <div class="two">
+    <div class="field">
+      <label for="dTurnos">Turnos</label>
+      <select id="dTurnos"></select>
+    </div>
+    <div class="field">
+      <label for="dEstatus">Estatus</label>
+      <select id="dEstatus"></select>
+    </div>
+  </div>
+  <div class="field">
+    <label for="dNotas">Notas</label>
+    <textarea id="dNotas" placeholder="Qué dijo, qué sigue, a quién preguntar…"></textarea>
+  </div>
+  <div class="btns">
+    <button type="button" class="btn" id="dCancel">Cancelar</button>
+    <button type="button" class="btn primary" id="dSave">Guardar</button>
+  </div>
+</div>
+
+<!-- Buscar nuevos -->
+<div class="sheet" id="sheetSearch" role="dialog" aria-modal="true" aria-labelledby="xTitle">
+  <h2 id="xTitle">Buscar nuevos</h2>
+  <p class="sub" id="xSub"></p>
+  <div class="field">
+    <label for="xGiro">Qué buscar</label>
+    <select id="xGiro"></select>
+  </div>
+  <div class="field" id="xOtherWrap" style="display:none">
+    <input id="xOther" type="text" placeholder="Ej. fábrica de calzado" autocomplete="off" aria-label="Otro giro">
+  </div>
+  <div class="field">
+    <label for="xZona">Dónde (colonia, zona o parque industrial)</label>
+    <input id="xZona" type="text" placeholder="Ej. Piedra Azul, León" autocomplete="off">
+  </div>
+  <div class="btns">
+    <button type="button" class="btn primary" id="xGo">Buscar</button>
+    <button type="button" class="btn" id="xClose">Cerrar</button>
+  </div>
+  <p class="note" id="xInfo" style="margin-top:12px"></p>
+  <div id="xList"></div>
+  <div class="btns" id="xFoot" style="display:none">
+    <button type="button" class="btn" id="xMore">Ver más</button>
+    <button type="button" class="btn primary" id="xAdd">Agregar</button>
+  </div>
+</div>
+
+<!-- Importar tanda -->
+<div class="sheet" id="sheetImport" role="dialog" aria-modal="true" aria-labelledby="iTitle">
+  <h2 id="iTitle">Importar tanda</h2>
+  <p class="sub">Pega la tabla de 8 columnas (Nombre, Giro, Segmento, Dirección, Municipio, Teléfono, Fuente, Tamaño). Sirve tanto la tabla que te paso aquí como filas copiadas desde Google Sheets. Los que ya estén en la app se omiten.</p>
+  <div class="field"><textarea id="iText" class="mono" placeholder="| Nombre | Giro | Segmento | … |"></textarea></div>
+  <div class="btns">
+    <button type="button" class="btn" id="iCancel">Cancelar</button>
+    <button type="button" class="btn primary" id="iGo">Agregar</button>
+  </div>
+</div>
+
+<!-- Ajustes -->
+<div class="sheet" id="sheetSettings" role="dialog" aria-modal="true" aria-labelledby="sTitle">
+  <h2 id="sTitle">Ajustes</h2>
+  <p class="sub">La URL y el código se guardan solo en este dispositivo.</p>
+  <div class="field">
+    <label for="sUrl">URL del Apps Script (termina en /exec)</label>
+    <input id="sUrl" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false">
+  </div>
+  <div class="field">
+    <label for="sToken">Código secreto</label>
+    <input id="sToken" type="password" placeholder="El mismo que pusiste en el script" autocomplete="off" autocapitalize="off" spellcheck="false">
+  </div>
+  <div class="btns">
+    <button type="button" class="btn primary" id="sSave">Guardar y probar</button>
+  </div>
+  <div class="btns">
+    <button type="button" class="btn" id="sSyncNow">Enviar ahora</button>
+    <button type="button" class="btn" id="sResend">Reenviar todo</button>
+  </div>
+  <hr>
+  <p class="note"><b>Respaldo.</b> Esta app guarda los datos en este dispositivo. Si cambias de teléfono o reinstalas el ícono, copia el respaldo antes y restáuralo después.</p>
+  <div class="btns">
+    <button type="button" class="btn" id="sBackup">Copiar respaldo</button>
+  </div>
+  <div class="field" style="margin-top:12px"><textarea id="sRestoreText" class="mono" placeholder="Pega aquí un respaldo para restaurarlo"></textarea></div>
+  <div class="btns">
+    <button type="button" class="btn" id="sRestore">Restaurar respaldo</button>
+    <button type="button" class="btn" id="sClose">Cerrar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ Datos iniciales (50 prospectos de la primera tanda) ============ */
+  var MUN = "León, Gto.", FUENTE = "Google Maps";
+  var G_MENOR = "Comercio al por menor de abarrotes", G_MAYOR = "Comercio al por mayor de abarrotes";
+
+  // [nombre, dirección, teléfono, tamaño, (opcional) "M" = mayorista]
+  var SEED_BAJIO = [
+    ["Popular Abarrotera","Luis Pasteur 205, El Peluchán","477 776 1818","Mediana"],
+    ["Super Abarrotes Guerrero","Blvrd Miguel Hidalgo 611, Héroes de Chapultepec","477 717 0115","Mediana"],
+    ["Abarrotera San Jorge","Av. Sion 1102, San Felipe de Jesús","477 772 1990","Grande"],
+    ["San Jorge Abarrotera","Blvd. San Pedro, Parques del Sur","","Grande"],
+    ["San Jorge Abarrotera","Blvrd Francisco Villa 1310, Fracc. del Granjeno","","Mediana"],
+    ["Tienda Mini Súper San Pedro","Blvd. San Pedro 1320, Jardines de Jerez II y III","","Chica"],
+    ["Abarrotera San Jorge","José M. Belauzarán 517, Villa Insurgentes","477 779 7347","Grande"],
+    ["Abarrotes San Jorge","Agua Azul","477 741 0316","Grande"],
+    ["Abarrotes San Miguel","Cda. Río Lerma 501, San Miguel","","Chica"],
+    ["Abarrotes Don Evaristo","Río de Los Castillos 132, La Lagunita","477 790 7644","Chica"],
+    ["Abarrotes el Patrón","Amatea 102, Colina Real","477 197 0176","Grande"],
+    ["Abarrotera La Cadena","Blvd. J.J. Torres Landa Ote. 5917, San Isidro","479 395 2481","Mediana"],
+    ["Abarrotera la Cadena","Blvd. Antonio Madrazo 504, La Carmona","477 716 3726","Mediana"],
+    ["El Patrón Abarrotera, Suc. Delta","C. Valle del Rocío 426, Paseos del Molino","477 645 1569","Grande"],
+    ["Abarrotera San Jorge","Blvd. Epsilon 344, Industrial Delta Sur","477 136 0873","Grande"],
+    ["Abarrotera Ciro's","Blvd. Aristóteles 802, La Joya","477 808 7398","Mediana"],
+    ["Súper Abarrotes Lolita","Cto. Hoja de Fresno","","Chica"],
+    ["Zorro Abarrotero Hermanos Aldama","Blvd. Hermanos Aldama 3157","477 643 1070","Grande"],
+    ["Abarrotes González","Valle de Egipto 130-A, Valle de los Naranjos","","Chica"],
+    ["Abarrotes Chive","Paso de Arroyo Hondo, Col. La Esperanza de Alfaro","","Chica"],
+    ["Zorro Abarrotero León","Blvrd Torres Landa Pte 502-A, Los Fresnos","477 707 0508","Grande"],
+    ["Zorro Abarrotero León 2","Blvd. Campestre 114, La Florida","477 429 1553","Grande"],
+    ["Abarrotes \"Don Pollo\"","Asturias 1301, Vista Hermosa (San Juan Bosco)","","Chica"],
+    ["Abarrotes \"La Luz\"","Circunvalación Ote. 716, Villas del Moral","717 2131","Chica"],
+    ["Abarrotera El Patrón Delta","Blvd. Delta 1809-C, Agua Azul","477 816 0300","Mediana"],
+    ["Abarrotera San Jorge","Madre Tierra 206, Valle de San José","477 772 7984","Chica"],
+    ["Tienda Bara Santa Rosa","C. Santo Tomás de Aquino 404, Santa Rosa de Lima","","Mediana"],
+    ["Abarrotera Giro","Central de Abastos, Sección I, Local 7","477 763 5933","Grande","M"],
+    ["Abarrotes y Semillas \"La Luz\"","Central de Abastos, Módulo I, Bodega 2","477 763 5188","Grande","M"],
+    ["Abarrotera San Martín","Ciudad Industrial","477 763 5044","Grande","M"]
+  ];
+
+  // [nombre, giro, dirección, teléfono, tamaño]
+  var SEED_WISE = [
+    ["Transmisión y Lubricación Industrial","Taller de servicio automotriz/industrial","Blvd. Río Mayo 7504, Valle de Jerez","477 212 2868","Pequeño"],
+    ["Curtidos Bengala","Curtiduría","Sta. Crocce 106, Industrial Santa Crocce","477 778 0966","Pequeño"],
+    ["Curtidores Supremos","Curtiduría","C. 16 de Septiembre 724, Obregón","477 642 4185","Pequeño"],
+    ["Curtidos Libau de León","Curtiduría","Ave. Unión de Curtidores 224, Parque Ecológico Industrial","477 778 0019","Pequeño"],
+    ["Curtiembres De México","Curtiduría","Monte Carmelo 112, Arroyo Hondo","477 778 0063","Pequeño"],
+    ["Poeles Proceso de Curtido y Maquila","Curtiduría / maquila","Sta. Crocce 211, Industrial Santa Crocce","477 778 0054","Pequeño"],
+    ["Tanned Mexican Finos","Curtiduría","Circuito Alizarina 102, Parque Industrial de León","477 788 2500","Pequeño"],
+    ["Arte Textil","Manufactura textil","Océano Índico de Lindavista 514, Lindavista","477 717 0893","Pequeño"],
+    ["A&C Maquiladora Bajío","Maquiladora","San Carlos 211, San Manuel","477 404 2715","Pequeño"],
+    ["Febtex","Manufactura e impresión textil","C. Pino Suárez 912, San Miguel","477 270 3023","Pequeño"],
+    ["Chiyoda Integre de México","Manufactura industrial","Parque Industrial Colinas de León","477 104 3087","Mediano"],
+    ["4G Ingeniería","Manufactura / ingeniería industrial","Carretera Federal 45 Km 11.6, El Resplandor","477 772 6259","Mediano"],
+    ["Novatec León","Manufactura industrial","Parque Industrial Colinas de León","477 689 4043","Mediano"],
+    ["DEMO TECHNIC LEON","Manufactura industrial","Parque Industrial León Bajío (PILBA)","477 344 1060","Mediano"],
+    ["Textiles León","Manufactura textil (cintas y elásticos)","C. Kappa 107, Industrial Delta","477 152 4800","Mediano"],
+    ["RONGTAI LEÓN","Fundición de aluminio (die casting)","Parque Industrial Colinas de León","477 343 2600","Mediano-alto"],
+    ["Kasai Mexicana","Manufactura automotriz","Blvd. M. de Cervantes Saavedra Sur 7502, Ciudad Industrial","477 763 5550","Mediano-alto"],
+    ["EANSA (Equipos Automotrices Nacionales)","Manufactura automotriz","Parque Industrial León Bajío (PILBA)","477 740 0450","Mediano-alto"],
+    ["Grupo Grismar","Manufactura de calzado","Central de Abastos","477 763 5001","Mediano-alto"],
+    ["Corporación Nacional Curtidora","Curtiduría (planta grande)","Sta. Crocce 110, Industrial Santa Crocce","477 778 0223","Mediano-alto"]
+  ];
+
+  /* ============ Catálogos ============ */
+  var BRANDS = {
+    bajio:{
+      label:"Bajío Sustentable",
+      title:"Abarroteras y comercios de León",
+      sub:"Negocios de barrio con refrigeración y buen tráfico: el perfil que mejor convierte.",
+      sizes:["Chica","Mediana","Grande"],
+      ranges:{Chica:"150–400",Mediana:"350–700",Grande:"900–2,000"},
+      theme:"#FFFFFF"
+    },
+    wise:{
+      label:"Wise Solar Energy",
+      title:"Naves y plantas con carga industrial",
+      sub:"Talleres, curtidurías y manufactura con motores, hornos o varios turnos.",
+      sizes:["Pequeño","Mediano","Mediano-alto"],
+      ranges:{"Pequeño":"3,000–8,000",Mediano:"8,000–25,000","Mediano-alto":"25,000–60,000"},
+      theme:"#FFFFFF"
+    }
+  };
+  var ESTATUS = ["Por contactar","Contactado","Visita agendada","Cotizando","Descartado"];
+  var TARIFAS = ["","PDBT","GDBT","DIST","GDMTH","GDMTO","Por confirmar"];
+  var TURNOS = ["","1 turno","2 turnos","3 turnos","24/7","No aplica"];
+  var BAR = {
+    bajio:{Chica:"#FFD400",Mediana:"#E0A100",Grande:"#F5781C"},
+    wise:{"Pequeño":"#9FC6EA",Mediano:"#2E86DE","Mediano-alto":"#1C4E86"}
+  };
+
+  var KEY = "prospectos:v1:data", KEY_CFG = "prospectos:v1:cfg";
+
+  /* ============ Utilidades ============ */
+  function $(id){ return document.getElementById(id); }
+  function el(tag, cls, text){ var n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; }
+  function norm(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim(); }
+  function hid(s){ var h = 5381; for(var i=0;i<s.length;i++){ h = ((h<<5)+h+s.charCodeAt(i))|0; } return "p"+(h>>>0).toString(36); }
+  function makeId(nombre, dir){ return hid(norm(nombre)+"|"+norm(dir)); }
+  function nowIso(){ return new Date().toISOString(); }
+
+  function score(p){
+    var c = parseFloat(String(p.consumo==null?"":p.consumo).replace(/,/g,""));
+    if(!isFinite(c) || c <= 0) return null;
+    return Math.min(5, Math.max(1, Math.round(c/2000)+1));
+  }
+  function prio(s){ return s==null ? "" : (s>=4 ? "Alta" : (s>=2 ? "Media" : "Baja")); }
+
+  function blank(o){
+    return {
+      id:makeId(o.nombre,o.direccion), brand:o.brand, nombre:o.nombre, giro:o.giro||"", segmento:o.segmento||"",
+      direccion:o.direccion||"", municipio:o.municipio||MUN, telefono:o.telefono||"", fuente:o.fuente||FUENTE,
+      tamano:o.tamano||"", consumo:"", tarifa:"", equipo:"", turnos:"", estatus:"Por contactar", notas:"",
+      touched:false, dirty:false, updated:""
+    };
+  }
+  function seed(){
+    var out = [];
+    SEED_BAJIO.forEach(function(r){
+      out.push(blank({brand:"bajio", nombre:r[0], direccion:r[1], telefono:r[2], tamano:r[3],
+        giro:r[4]==="M"?G_MAYOR:G_MENOR, segmento:r[4]==="M"?"Abarrotera (mayorista)":"Abarrotera"}));
+    });
+    SEED_WISE.forEach(function(r){
+      out.push(blank({brand:"wise", nombre:r[0], giro:r[1], direccion:r[2], telefono:r[3], tamano:r[4], segmento:"Industrial"}));
+    });
+    return out;
+  }
+
+  /* ============ Almacenamiento ============ */
+  var store = {v:1, prospects:[]};
+  var cfg = {url:"", token:""};
+  var warned = false;
+
+  function persist(){
+    try{ localStorage.setItem(KEY, JSON.stringify(store)); }
+    catch(e){ if(!warned){ warned = true; toast("No pude guardar en este dispositivo. Revisa el espacio o el modo privado."); } }
+  }
+  function loadAll(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(raw){ var d = JSON.parse(raw); if(d && Array.isArray(d.prospects)) store = d; }
+    }catch(e){}
+    if(!store.prospects.length){ store.prospects = seed(); persist(); }
+    try{
+      var c = localStorage.getItem(KEY_CFG);
+      if(c){ var o = JSON.parse(c); cfg.url = o.url||""; cfg.token = o.token||""; }
+    }catch(e){}
+  }
+  function saveCfg(){
+    try{ localStorage.setItem(KEY_CFG, JSON.stringify(cfg)); }catch(e){ toast("No pude guardar los ajustes en este dispositivo."); }
+  }
+  function byId(id){ for(var i=0;i<store.prospects.length;i++){ if(store.prospects[i].id===id) return store.prospects[i]; } return null; }
+
+  /* ============ Estado de la vista ============ */
+  var state = {brand:"bajio", q:"", size:"all", estatus:"all"};
+  var syncing = false, lastError = "", syncTimer = null;
+
+  function visible(){
+    var q = norm(state.q);
+    return store.prospects.filter(function(p){
+      if(p.brand !== state.brand) return false;
+      if(state.size !== "all" && p.tamano !== state.size) return false;
+      if(state.estatus !== "all" && p.estatus !== state.estatus) return false;
+      if(q && norm(p.nombre+" "+p.direccion).indexOf(q) === -1) return false;
+      return true;
+    });
+  }
+
+  /* ============ Render ============ */
+  function render(){
+    var b = BRANDS[state.brand];
+    document.body.setAttribute("data-brand", state.brand);
+    $("themeColor").setAttribute("content", b.theme);
+    $("heroTitle").textContent = b.title;
+    $("heroSub").textContent = b.sub;
+
+    Array.prototype.forEach.call(document.querySelectorAll(".switcher button"), function(btn){
+      btn.setAttribute("aria-pressed", String(btn.getAttribute("data-target") === state.brand));
+    });
+
+    var chips = $("chips"); chips.innerHTML = "";
+    [["all","Todos"]].concat(b.sizes.map(function(s){ return [s,s]; })).forEach(function(pair){
+      var c = el("button","chip",pair[1]); c.type = "button";
+      c.setAttribute("aria-pressed", String(state.size === pair[0]));
+      c.addEventListener("click", function(){ state.size = pair[0]; render(); });
+      chips.appendChild(c);
+    });
+
+    var sel = $("fEstatus");
+    if(!sel.options.length){
+      sel.appendChild(new Option("Todos los estatus","all"));
+      ESTATUS.forEach(function(s){ sel.appendChild(new Option(s,s)); });
+    }
+    sel.value = state.estatus;
+
+    var rows = visible();
+    var mine = store.prospects.filter(function(p){ return p.brand === state.brand; });
+    $("statShown").textContent = rows.length;
+    $("statRated").textContent = mine.filter(function(p){ return score(p) != null; }).length;
+
+    var list = $("list"); list.innerHTML = "";
+    if(!rows.length){
+      list.appendChild(el("div","empty","Nada coincide con la búsqueda o el filtro."));
+    } else {
+      rows.forEach(function(p){ list.appendChild(buildRow(p)); });
+    }
+    updateStatus();
+  }
+
+  function buildRow(p){
+    var row = el("div","row" + (p.estatus==="Descartado" ? " dim" : ""));
+    var bar = el("div","bar");
+    bar.style.background = (BAR[p.brand] && BAR[p.brand][p.tamano]) || "#CCC";
+    row.appendChild(bar);
+
+    var body = el("div","body");
+
+    var l1 = el("div","line1");
+    l1.appendChild(el("p","name",p.nombre));
+    l1.appendChild(el("span","tag",p.tamano || "—"));
+    body.appendChild(l1);
+
+    body.appendChild(el("p","addr",p.direccion || "Sin dirección"));
+
+    var meta = el("div","meta");
+    var digits = String(p.telefono||"").replace(/[^0-9+]/g,"");
+    if(digits.length >= 7){
+      var a = el("a",null,p.telefono); a.href = "tel:"+digits;
+      meta.appendChild(a);
+    } else {
+      meta.appendChild(el("span","nophone","Sin teléfono"));
+    }
+    var s = score(p);
+    if(s != null){
+      var bd = el("span","badge "+prio(s).toLowerCase(), "Puntaje "+s+" · "+prio(s));
+      meta.appendChild(bd);
+    }
+    if(p.estatus && p.estatus !== "Por contactar") meta.appendChild(el("span","badge",p.estatus));
+    body.appendChild(meta);
+
+    var foot = el("div","foot");
+    var label = el("label");
+    var cb = el("input"); cb.type = "checkbox"; cb.checked = (p.estatus && p.estatus !== "Por contactar");
+    cb.addEventListener("change", function(){
+      p.estatus = cb.checked ? "Contactado" : "Por contactar";
+      touch(p); persist(); render(); scheduleSync();
+    });
+    label.appendChild(cb); label.appendChild(el("span",null,"Ya lo contacté"));
+    foot.appendChild(label);
+
+    var q = el("button","qualify","Calificar"); q.type = "button";
+    q.addEventListener("click", function(){ openDetail(p.id); });
+    foot.appendChild(q);
+    body.appendChild(foot);
+
+    row.appendChild(body);
+    return row;
+  }
+
+  function touch(p){ p.touched = true; p.dirty = true; p.updated = nowIso(); }
+
+  /* ============ Hojas inferiores ============ */
+  var openSheet = null;
+  function showSheet(id){
+    closeSheets();
+    $(id).classList.add("open"); $("backdrop").classList.add("open"); openSheet = id;
+  }
+  function closeSheets(){
+    ["sheetDetail","sheetImport","sheetSettings","sheetSearch"].forEach(function(id){ $(id).classList.remove("open"); });
+    $("backdrop").classList.remove("open"); openSheet = null; editingId = null;
+  }
+  $("backdrop").addEventListener("click", closeSheets);
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && openSheet) closeSheets(); });
+
+  function fillSelect(sel, values, current, emptyLabel){
+    sel.innerHTML = "";
+    values.forEach(function(v){
+      sel.appendChild(new Option(v === "" ? emptyLabel : v, v));
+    });
+    if(values.indexOf(current) === -1 && current){ sel.appendChild(new Option(current,current)); }
+    sel.value = current || "";
+  }
+
+  var editingId = null;
+  function openDetail(id){
+    var p = byId(id); if(!p) return;
+    showSheet("sheetDetail");   // showSheet cierra lo abierto y limpia editingId, por eso se asigna después
+    editingId = id;
+    var b = BRANDS[p.brand];
+    $("dName").textContent = p.nombre;
+    var sub = $("dSub"); sub.textContent = p.direccion || "";
+    var digits = String(p.telefono||"").replace(/[^0-9+]/g,"");
+    if(digits.length >= 7){
+      sub.appendChild(document.createTextNode(" · "));
+      var a = el("a",null,p.telefono); a.href = "tel:"+digits; sub.appendChild(a);
+    }
+    fillSelect($("dTamano"), b.sizes, p.tamano, "—");
+    $("dConsumo").value = p.consumo === "" || p.consumo == null ? "" : String(p.consumo);
+    fillSelect($("dTarifa"), TARIFAS, p.tarifa, "Sin definir");
+    $("dEquipo").value = p.equipo || "";
+    fillSelect($("dTurnos"), TURNOS, p.turnos, "Sin definir");
+    fillSelect($("dEstatus"), ESTATUS, p.estatus || "Por contactar", "");
+    $("dNotas").value = p.notas || "";
+    updateHint(); updateScoreBox();
+  }
+  function updateHint(){
+    var p = byId(editingId); if(!p) return;
+    var size = $("dTamano").value, r = BRANDS[p.brand].ranges[size];
+    $("dHint").textContent = r ? ("Rango típico de un negocio "+size.toLowerCase()+": "+r+" kWh/mes. Confírmalo con el recibo de CFE.") : "Confírmalo con el recibo de CFE.";
+  }
+  function cleanConsumo(v){
+    var t = String(v||"").replace(/[^0-9.,]/g,"").replace(/,/g,"");
+    var n = parseFloat(t);
+    return isFinite(n) && n > 0 ? n : "";
+  }
+  function updateScoreBox(){
+    var s = score({consumo:cleanConsumo($("dConsumo").value)});
+    $("dScore").textContent = s == null ? "—" : s + " de 5";
+    var bd = $("dPrio");
+    bd.textContent = s == null ? "Sin dato" : "Prioridad " + prio(s);
+    bd.className = "badge" + (s == null ? "" : " " + prio(s).toLowerCase());
+  }
+  $("dConsumo").addEventListener("input", updateScoreBox);
+  $("dTamano").addEventListener("change", updateHint);
+  $("dCancel").addEventListener("click", closeSheets);
+  $("dSave").addEventListener("click", function(){
+    var p = byId(editingId); if(!p) return closeSheets();
+    p.tamano = $("dTamano").value;
+    p.consumo = cleanConsumo($("dConsumo").value);
+    p.tarifa = $("dTarifa").value;
+    p.equipo = $("dEquipo").value.trim();
+    p.turnos = $("dTurnos").value;
+    p.estatus = $("dEstatus").value || "Por contactar";
+    p.notas = $("dNotas").value.trim();
+    touch(p); persist(); closeSheets(); render(); scheduleSync();
+  });
+
+  /* ============ Importar tanda ============ */
+  function parsePaste(text){
+    var out = [];
+    String(text).split(/\r?\n/).forEach(function(raw){
+      var line = raw.trim(); if(!line) return;
+      var cells;
+      if(line.indexOf("\t") !== -1){ cells = line.split("\t"); }
+      else if(line.indexOf("|") !== -1){
+        if(/^\|?\s*:?-{2,}/.test(line)) return;
+        cells = line.replace(/^\|/,"").replace(/\|$/,"").split("|");
+      } else return;
+      cells = cells.map(function(c){ return c.trim(); });
+      if(cells.length < 8) return;
+      if(/^nombre del negocio$/i.test(cells[0])) return;
+      out.push(cells);
+    });
+    return out;
+  }
+  function normSize(s){
+    var t = String(s||"").trim().replace(/^industrial\s+/i,"");
+    if(/^mediana?[\s-]*(alto|alta|grande)$/i.test(t)) return "Mediano-alto";
+    return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : "";
+  }
+  $("btnImport").addEventListener("click", function(){ $("iText").value = ""; showSheet("sheetImport"); });
+  $("iCancel").addEventListener("click", closeSheets);
+  $("iGo").addEventListener("click", function(){
+    var rows = parsePaste($("iText").value);
+    if(!rows.length){ toast("No encontré filas de 8 columnas. Pega la tabla completa."); return; }
+    var added = 0, skipped = 0, firstBrand = null;
+    rows.forEach(function(c){
+      var nombre = c[0], giro = c[1], seg = c[2], dir = c[3], mun = c[4], tel = c[5], fte = c[6], tam = c[7];
+      if(!nombre) return;
+      var brand = (/abarrot/i.test(seg) || /abarrot/i.test(giro)) ? "bajio" : "wise";
+      var id = makeId(nombre, dir);
+      if(byId(id)){ skipped++; return; }
+      if(tel === "—" || tel === "-") tel = "";
+      store.prospects.push(blank({brand:brand, nombre:nombre, giro:giro, segmento:seg, direccion:dir,
+        municipio:mun||MUN, telefono:tel, fuente:fte||FUENTE, tamano:normSize(tam)}));
+      if(!firstBrand) firstBrand = brand;
+      added++;
+    });
+    persist();
+    if(firstBrand){ state.brand = firstBrand; state.size = "all"; state.estatus = "all"; state.q = ""; $("q").value = ""; }
+    closeSheets(); render();
+    toast(added + " agregados" + (skipped ? " · " + skipped + " ya estaban" : ""));
+  });
+
+  /* ============ Buscar nuevos (Google Places vía Apps Script) ============ */
+  var GIROS = {
+    bajio:{
+      sub:"Abarroteras y negocios de barrio. Los resultados traen nombre, dirección y teléfono; tú calificas el tamaño y el consumo.",
+      zona:"León, Gto.", segmento:"Abarrotera",
+      opts:[["Abarrotes","Comercio al por menor de abarrotes"],["Abarrotera","Comercio al por menor de abarrotes"],
+            ["Abarrotes y semillas","Comercio al por mayor de abarrotes"],["Mini súper","Comercio al por menor de abarrotes"],
+            ["Tiendas de autoservicio de barrio","Comercio al por menor de abarrotes"]]
+    },
+    wise:{
+      sub:"Naves y plantas con carga industrial. Google no sabe el tamaño: lo estimas al calificar (empleados, turnos, maquinaria).",
+      zona:"León, Gto.", segmento:"Industrial",
+      opts:[["Curtiduría","Curtiduría"],["Fábrica de calzado","Manufactura de calzado"],["Maquiladora","Maquiladora"],
+            ["Manufactura industrial","Manufactura industrial"],["Fundición","Fundición / metalmecánica"],
+            ["Taller industrial","Taller industrial"],["Parque industrial","Parque industrial"]]
+    }
+  };
+  var found = [], nextToken = "", lastQuery = "", lastGiro = "", searching = false, selected = {}, hidden = 0;
+
+  function dkey(n, d){ return norm(n) + "|" + norm(d).slice(0,14); }
+  function phone10(t){ var d = String(t||"").replace(/\D/g,""); return d.length >= 10 ? d.slice(-10) : ""; }
+  function isKnown(c){
+    var k = dkey(c.nombre, c.direccion), ph = phone10(c.telefono);
+    return store.prospects.some(function(p){
+      return p.id === makeId(c.nombre, c.direccion) || dkey(p.nombre, p.direccion) === k || (ph && phone10(p.telefono) === ph);
+    });
+  }
+  function openSearch(){
+    if(!cfg.url || !cfg.token){ toast("Primero conecta el Apps Script en Ajustes."); return openSettings(); }
+    var g = GIROS[state.brand];
+    showSheet("sheetSearch");
+    $("xTitle").textContent = "Buscar nuevos · " + BRANDS[state.brand].label;
+    $("xSub").textContent = g.sub;
+    var sel = $("xGiro"); sel.innerHTML = "";
+    g.opts.forEach(function(o, i){ sel.appendChild(new Option(o[0], String(i))); });
+    sel.appendChild(new Option("Otro…", "other"));
+    $("xOtherWrap").style.display = "none"; $("xOther").value = "";
+    if(!$("xZona").value) $("xZona").value = g.zona;
+    resetResults(); $("xInfo").textContent = "";
+  }
+  function resetResults(){ found = []; selected = {}; nextToken = ""; hidden = 0; renderCands(); }
+  function renderCands(){
+    var box = $("xList"); box.innerHTML = "";
+    found.forEach(function(c){
+      var lab = el("label","cand");
+      var cb = el("input"); cb.type = "checkbox"; cb.checked = !!selected[c.placeId];
+      cb.addEventListener("change", function(){ selected[c.placeId] = cb.checked; updateAddBtn(); });
+      lab.appendChild(cb);
+      var b = el("div","c-body");
+      b.appendChild(el("p","c-name",c.nombre));
+      b.appendChild(el("p","c-addr",c.direccion || "Sin dirección"));
+      b.appendChild(el("p","c-tel",c.telefono || "Sin teléfono"));
+      lab.appendChild(b); box.appendChild(lab);
+    });
+    $("xFoot").style.display = (found.length || nextToken) ? "flex" : "none";
+    $("xMore").style.display = nextToken ? "" : "none";
+    updateAddBtn();
+  }
+  function updateAddBtn(){
+    var n = found.filter(function(c){ return selected[c.placeId]; }).length;
+    $("xAdd").textContent = n ? "Agregar " + n : "Agregar";
+    $("xAdd").disabled = !n; $("xAdd").style.opacity = n ? "1" : ".5";
+  }
+  function runSearch(more){
+    if(searching) return;
+    var g = GIROS[state.brand], gi = $("xGiro").value, term, giroName;
+    if(gi === "other"){ term = $("xOther").value.trim(); giroName = term; }
+    else { term = g.opts[+gi][0]; giroName = g.opts[+gi][1]; }
+    var zona = $("xZona").value.trim();
+    if(!term){ toast("Escribe qué quieres buscar."); return; }
+    if(!navigator.onLine){ toast("Sin internet: la búsqueda necesita conexión."); return; }
+    var query = term + (zona ? " en " + zona : "");
+    if(!more){ resetResults(); lastQuery = query; lastGiro = giroName; }
+    searching = true; $("xGo").disabled = true; $("xMore").disabled = true;
+    $("xInfo").textContent = "Buscando…";
+    apiPost({token:cfg.token, action:"buscar", query:lastQuery, pageToken:more ? nextToken : ""}).then(function(d){
+      if(!d.ok) throw new Error(d.error || "El script rechazó la búsqueda");
+      var have = {}; found.forEach(function(c){ have[c.placeId] = 1; });
+      var fresh = 0;
+      (d.places || []).forEach(function(c){
+        if(have[c.placeId]) return;
+        if(isKnown(c)){ hidden++; return; }
+        found.push(c); selected[c.placeId] = true; fresh++;
+      });
+      hidden += d.enHoja || 0;
+      nextToken = d.nextPageToken || "";
+      $("xInfo").textContent = found.length
+        ? found.length + " nuevos" + (hidden ? " · " + hidden + " ya los tenías (omitidos)" : "") + ". Desmarca los que no te sirvan."
+        : "No encontré nuevos" + (hidden ? " (" + hidden + " ya los tenías)" : "") + ". Prueba otra colonia o giro" + (nextToken ? ", o toca «Ver más»." : ".");
+      renderCands();
+    }).catch(function(e){
+      $("xInfo").textContent = "No se pudo buscar: " + (e.message || "error de red");
+    }).then(function(){ searching = false; $("xGo").disabled = false; $("xMore").disabled = false; });
+  }
+  $("btnSearch").addEventListener("click", openSearch);
+  $("xClose").addEventListener("click", closeSheets);
+  $("xGiro").addEventListener("change", function(){ $("xOtherWrap").style.display = $("xGiro").value === "other" ? "" : "none"; });
+  $("xGo").addEventListener("click", function(){ runSearch(false); });
+  $("xMore").addEventListener("click", function(){ runSearch(true); });
+  $("xAdd").addEventListener("click", function(){
+    var g = GIROS[state.brand], n = 0;
+    found.forEach(function(c){
+      if(!selected[c.placeId] || isKnown(c)) return;
+      store.prospects.push(blank({brand:state.brand, nombre:c.nombre, giro:lastGiro, segmento:g.segmento,
+        direccion:c.direccion, telefono:c.telefono, fuente:"Google Maps"}));
+      n++;
+    });
+    persist(); state.size = "all"; state.estatus = "all"; state.q = ""; $("q").value = "";
+    closeSheets(); render(); toast(n + " agregados a tu lista. Toca «Calificar» para estimar el consumo.");
+  });
+
+  /* ============ Ajustes, envío y respaldo ============ */
+  $("btnSettings").addEventListener("click", openSettings);
+  $("syncPill").addEventListener("click", function(){
+    if(!cfg.url || !cfg.token) return openSettings();
+    syncNow(true);
+  });
+  function openSettings(){
+    $("sUrl").value = cfg.url; $("sToken").value = cfg.token; $("sRestoreText").value = "";
+    showSheet("sheetSettings");
+  }
+  $("sClose").addEventListener("click", closeSheets);
+
+  function apiPost(payload){
+    return fetch(cfg.url, {
+      method:"POST", redirect:"follow",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(payload)
+    }).then(function(res){
+      return res.text().then(function(t){
+        var d; try{ d = JSON.parse(t); }catch(e){ throw new Error("El script no devolvió JSON. Revisa que esté publicado con acceso para «Cualquier persona»."); }
+        return d;
+      });
+    });
+  }
+  $("sSave").addEventListener("click", function(){
+    var url = $("sUrl").value.trim(), token = $("sToken").value.trim();
+    if(!/^https:\/\/script\.google\.com\/.+\/exec/.test(url)){ toast("La URL debe empezar con https://script.google.com y terminar en /exec"); return; }
+    if(!token){ toast("Falta el código secreto."); return; }
+    cfg.url = url; cfg.token = token; saveCfg();
+    if(!navigator.onLine){ toast("Guardado. No hay internet para probar la conexión."); updateStatus(); return; }
+    toast("Probando conexión…");
+    apiPost({token:token, action:"ping"}).then(function(d){
+      if(!d.ok) throw new Error(d.error || "El script rechazó la prueba");
+      lastError = ""; toast("Conectado a la pestaña «" + d.tab + "» (" + d.rows + " filas)." + (d.places === false ? " Falta PLACES_KEY para buscar nuevos." : "")); updateStatus(); scheduleSync();
+    }).catch(function(e){ lastError = e.message; toast("No conectó: " + e.message); updateStatus(); });
+  });
+  $("sSyncNow").addEventListener("click", function(){ closeSheets(); syncNow(true); });
+  $("sResend").addEventListener("click", function(){
+    var n = 0; store.prospects.forEach(function(p){ if(p.touched){ p.dirty = true; n++; } });
+    persist(); closeSheets(); render();
+    if(!n){ toast("Todavía no has calificado ni marcado ninguno."); return; }
+    syncNow(true);
+  });
+
+  function pendingList(){ return store.prospects.filter(function(p){ return p.dirty; }); }
+  function toRow(p){
+    var s = score(p);
+    return {id:p.id, nombre:p.nombre, giro:p.giro, segmento:p.segmento, direccion:p.direccion, municipio:p.municipio,
+      telefono:p.telefono, fuente:p.fuente, tamano:p.tamano, consumo:p.consumo, tarifa:p.tarifa, equipo:p.equipo,
+      turnos:p.turnos, puntaje:s == null ? "" : s, prioridad:prio(s), estatus:p.estatus, notas:p.notas, updated:p.updated};
+  }
+  function scheduleSync(){
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(function(){ syncNow(false); }, 900);
+  }
+  function syncNow(manual){
+    if(syncing) return Promise.resolve();
+    if(!cfg.url || !cfg.token){ if(manual) toast("Configura la URL y el código en Ajustes."); updateStatus(); return Promise.resolve(); }
+    var pend = pendingList();
+    if(!pend.length){ if(manual) toast("Todo está enviado."); updateStatus(); return Promise.resolve(); }
+    if(!navigator.onLine){ if(manual) toast("Sin internet: se enviará al reconectar."); updateStatus(); return Promise.resolve(); }
+    syncing = true; lastError = ""; updateStatus();
+    var chunks = []; for(var i=0;i<pend.length;i+=40) chunks.push(pend.slice(i,i+40));
+    var total = 0;
+    return chunks.reduce(function(chain, chunk){
+      return chain.then(function(){
+        var snap = chunk.map(function(p){ return [p.id, p.updated]; });
+        return apiPost({token:cfg.token, action:"upsert", rows:chunk.map(toRow)}).then(function(d){
+          if(!d.ok) throw new Error(d.error || "Error del script");
+          snap.forEach(function(s){ var p = byId(s[0]); if(p && p.updated === s[1]) p.dirty = false; });
+          total += chunk.length; persist();
+        });
+      });
+    }, Promise.resolve()).then(function(){
+      if(manual) toast("Enviados " + total + " a la hoja.");
+    }).catch(function(e){
+      lastError = e.message || "Error de red";
+      if(manual) toast("No se pudo enviar: " + lastError);
+    }).then(function(){ syncing = false; render(); });
+  }
+
+  function updateStatus(){
+    var pill = $("syncPill"), txt = $("syncText"), n = pendingList().length;
+    pill.className = "pill";
+    if(syncing){ pill.className += " busy warn"; txt.textContent = "Enviando…"; return; }
+    if(!cfg.url || !cfg.token){ txt.textContent = "Sin conectar"; return; }
+    if(lastError){ pill.className += " err"; txt.textContent = "Error · reintentar"; return; }
+    if(n){ pill.className += " warn"; txt.textContent = n + (n === 1 ? " pendiente" : " pendientes") + (navigator.onLine ? "" : " · sin internet"); return; }
+    var touched = store.prospects.some(function(p){ return p.touched; });
+    pill.className += touched ? " ok" : "";
+    txt.textContent = touched ? "Todo enviado" : "Nada por enviar";
+  }
+
+  $("sBackup").addEventListener("click", function(){
+    var text = JSON.stringify({v:1, prospects:store.prospects});
+    var done = function(){ toast("Respaldo copiado. Pégalo en una nota o en un mensaje a ti mismo."); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){ fallbackCopy(text, done); });
+    } else fallbackCopy(text, done);
+  });
+  function fallbackCopy(text, done){
+    var ta = $("sRestoreText"); ta.value = text; ta.focus(); ta.select();
+    try{ document.execCommand("copy"); done(); }catch(e){ toast("Copia manualmente el texto de la caja."); }
+  }
+  $("sRestore").addEventListener("click", function(){
+    var d; try{ d = JSON.parse($("sRestoreText").value); }catch(e){ toast("Ese texto no es un respaldo válido."); return; }
+    if(!d || !Array.isArray(d.prospects)){ toast("Ese texto no es un respaldo válido."); return; }
+    var n = 0;
+    d.prospects.forEach(function(r){
+      if(!r || !r.id || !r.nombre || (r.brand !== "bajio" && r.brand !== "wise")) return;
+      var cur = byId(r.id), item = blank({brand:r.brand, nombre:r.nombre, direccion:r.direccion});
+      Object.keys(item).forEach(function(k){ if(r[k] !== undefined) item[k] = r[k]; });
+      item.id = r.id; item.dirty = !!item.touched;
+      if(cur){ Object.keys(item).forEach(function(k){ cur[k] = item[k]; }); } else { store.prospects.push(item); }
+      n++;
+    });
+    persist(); closeSheets(); render(); toast(n + " prospectos restaurados.");
+    if(n) scheduleSync();
+  });
+
+  /* ============ Toast ============ */
+  var toastTimer = null;
+  function toast(msg){
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 3600);
+  }
+
+  /* ============ Eventos globales ============ */
+  Array.prototype.forEach.call(document.querySelectorAll(".switcher button"), function(btn){
+    btn.addEventListener("click", function(){
+      state.brand = btn.getAttribute("data-target"); state.size = "all"; render();
+    });
+  });
+  $("q").addEventListener("input", function(e){ state.q = e.target.value; render(); });
+  $("fEstatus").addEventListener("change", function(e){ state.estatus = e.target.value; render(); });
+  window.addEventListener("online", function(){ updateStatus(); scheduleSync(); });
+  window.addEventListener("offline", updateStatus);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) scheduleSync(); });
+
+  loadAll();
+  render();
+  scheduleSync();
+
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+  }
+})();
+</script>
+</body>
+</html>
