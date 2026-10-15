@@ -1,7 +1,7 @@
 /* Service worker: la app abre sin internet.
    Red primero (para que las actualizaciones lleguen), caché como respaldo.
    Las llamadas al Apps Script (otro dominio) nunca pasan por aquí. */
-const CACHE = 'prospectos-v8';
+const CACHE = 'prospectos-v9';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'logo-bajio.png', 'logo-wise.png'];
 
 self.addEventListener('install', (e) => {
@@ -13,7 +13,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('prospectos-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -23,6 +23,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.indexOf('/rutas/') !== -1) return;   // la app de rutas tiene su propio service worker
 
   e.respondWith(
     fetch(req)
