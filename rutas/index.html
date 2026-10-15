@@ -378,19 +378,6 @@ textarea{min-height:76px;resize:vertical}
   <div class="field"><label for="sToken">Código secreto</label><input type="password" id="sToken" autocomplete="off"></div>
   <button class="btn primary" type="button" id="sSave">Guardar y probar</button>
   <button class="btn" type="button" id="sSyncNow">Sincronizar ahora</button>
-  <div class="label" style="margin-top:6px">Aviso diario de pendientes</div>
-  <p class="sub" id="avisoEstado">Te llega un correo cada mañana (menos domingo) con lo de hoy y lo atrasado. En el iPhone lo ves como notificación de Gmail.</p>
-  <div class="row2">
-    <select id="avisoHora" aria-label="Hora del aviso">
-      <option value="5">5:00 am</option><option value="6">6:00 am</option><option value="7" selected>7:00 am</option>
-      <option value="8">8:00 am</option><option value="9">9:00 am</option><option value="10">10:00 am</option><option value="11">11:00 am</option>
-    </select>
-    <button class="btn" type="button" id="avisoOn">Activar</button>
-  </div>
-  <div class="row2">
-    <button class="btn small" type="button" id="avisoTest">Mandar prueba</button>
-    <button class="btn small" type="button" id="avisoOff">Desactivar</button>
-  </div>
   <div class="label" style="margin-top:6px">Respaldo de este teléfono</div>
   <div class="row2">
     <button class="btn small" type="button" id="sBackup">Copiar respaldo</button>
@@ -440,7 +427,7 @@ textarea{min-height:76px;resize:vertical}
   function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){ toast("No pude guardar en este teléfono. Revisa el espacio o el modo privado."); } }
   function load(){
     try{ var r = localStorage.getItem(KEY); if(r){ var d = JSON.parse(r); if(d && Array.isArray(d.items)) store = d; } }catch(e){}
-    try{ var c = localStorage.getItem(KEY_CFG); if(c){ var o = JSON.parse(c); cfg.url = o.url||""; cfg.token = o.token||""; cfg.aviso = o.aviso||null; } }catch(e){}
+    try{ var c = localStorage.getItem(KEY_CFG); if(c){ var o = JSON.parse(c); cfg.url = o.url||""; cfg.token = o.token||""; } }catch(e){}
   }
   function saveCfg(){ try{ localStorage.setItem(KEY_CFG, JSON.stringify(cfg)); }catch(e){} }
   function byId(id){ for(var i=0;i<store.items.length;i++) if(store.items[i].id===id) return store.items[i]; return null; }
@@ -828,11 +815,7 @@ textarea{min-height:76px;resize:vertical}
   /* ============ Ajustes ============ */
   function showSheet(id){ $("scrim").hidden = false; $(id).hidden = false; }
   function closeSheets(){ $("scrim").hidden = true; qsa(".sheet").forEach(function(s){ s.hidden = true; }); }
-  function openSettings(){
-    $("sUrl").value = cfg.url; $("sToken").value = cfg.token; $("sRestoreText").value = ""; showSheet("sheetSettings");
-    if(cfg.aviso) pintaAviso(cfg.aviso);
-    if(cfg.url && cfg.token && navigator.onLine) apiPost({token:cfg.token, action:"ping"}).then(function(d){ if(d && d.ok && d.aviso) pintaAviso(d.aviso); }).catch(function(){});
-  }
+  function openSettings(){ $("sUrl").value = cfg.url; $("sToken").value = cfg.token; $("sRestoreText").value = ""; showSheet("sheetSettings"); }
   $("btnSettings").addEventListener("click", openSettings);
   $("scrim").addEventListener("click", closeSheets);
   $("sClose").addEventListener("click", closeSheets);
@@ -845,40 +828,11 @@ textarea{min-height:76px;resize:vertical}
     toast("Probando conexión…");
     apiPost({token:token, action:"ping"}).then(function(d){
       if(!d.ok) throw new Error(d.error || "El script rechazó la prueba");
-      lastError = ""; if(d.aviso) pintaAviso(d.aviso); toast("Conectado a «" + d.tab + "» (" + d.rows + " filas). Trayendo tus negocios…");
+      lastError = ""; toast("Conectado a «" + d.tab + "» (" + d.rows + " filas). Trayendo tus negocios…");
       closeSheets(); syncAll(false);
     }).catch(function(e){ lastError = e.message; toast("No conectó: " + e.message); updateStatus(); });
   });
   $("sSyncNow").addEventListener("click", function(){ closeSheets(); syncAll(true); });
-
-  /* ============ Aviso diario ============ */
-  function pintaAviso(a){
-    if(!a) return;
-    cfg.aviso = a; saveCfg();
-    var h = Number(a.hora) || 7;
-    $("avisoHora").value = String(h);
-    $("avisoEstado").textContent = a.activo
-      ? "Activo: todos los días (menos domingo) a las " + h + ":00 am te llega un correo a " + a.email + " con tus pendientes."
-      : "Apagado. Elige la hora y toca Activar: te llegará un correo cada mañana (menos domingo) con lo de hoy y lo atrasado.";
-    $("avisoOn").textContent = a.activo ? "Cambiar hora" : "Activar";
-  }
-  function avisoCall(modo){
-    if(!cfg.url || !cfg.token){ toast("Primero guarda la URL y el código."); return; }
-    if(!navigator.onLine){ toast("Necesitas internet para esto."); return; }
-    toast(modo === "probar" ? "Mandando correo de prueba…" : "Guardando…");
-    apiPost({token:cfg.token, action:"aviso", modo:modo, hora:Number($("avisoHora").value)}).then(function(d){
-      if(!d.ok) throw new Error(d.error || "El script lo rechazó");
-      pintaAviso(d.aviso);
-      if(modo === "probar") toast("Listo: revisa tu correo " + (d.email || "") + " (" + d.enviados + " pendientes).");
-      else if(modo === "activar") toast("Aviso diario activo a las " + $("avisoHora").value + ":00 am.");
-      else toast("Aviso diario apagado.");
-    }).catch(function(e){
-      toast(/permis|autoriz|Authorization|scope/i.test(e.message) ? "Falta autorizar el correo: abre el Apps Script, corre «avisoDiario» una vez y acepta los permisos." : "No se pudo: " + e.message);
-    });
-  }
-  $("avisoOn").addEventListener("click", function(){ avisoCall("activar"); });
-  $("avisoOff").addEventListener("click", function(){ avisoCall("desactivar"); });
-  $("avisoTest").addEventListener("click", function(){ avisoCall("probar"); });
   $("sBackup").addEventListener("click", function(){
     var text = JSON.stringify({v:1, items:store.items});
     var done = function(){ toast("Respaldo copiado. Pégalo en una nota."); };
