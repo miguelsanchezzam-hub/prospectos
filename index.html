@@ -382,8 +382,8 @@
     <input id="xOther" type="text" placeholder="Ej. fábrica de calzado" autocomplete="off" aria-label="Otro giro">
   </div>
   <div class="field">
-    <label for="xZona">Dónde (colonia, zona o parque industrial)</label>
-    <input id="xZona" type="text" placeholder="Ej. Piedra Azul, León" autocomplete="off">
+    <label for="xZona">Colonia o zona (opcional; vacío = todo León)</label>
+    <input id="xZona" type="text" placeholder="Ej. Piedra Azul" autocomplete="off">
   </div>
   <div class="btns">
     <button type="button" class="btn primary" id="xGo">Buscar</button>
@@ -827,24 +827,24 @@
     toast(added + " agregados" + (skipped ? " · " + skipped + " ya estaban" : ""));
   });
 
-  /* ============ Buscar nuevos (Google Places vía Apps Script) ============ */
+  /* ============ Buscar nuevos (DENUE gratis o Google Places, vía Apps Script) ============ */
   var GIROS = {
     bajio:{
-      sub:"Abarroteras y negocios de barrio. Los resultados traen nombre, dirección y teléfono; tú calificas el tamaño y el consumo.",
-      zona:"León, Gto.", segmento:"Abarrotera",
-      opts:[["Abarrotes","Comercio al por menor de abarrotes"],["Abarrotera","Comercio al por menor de abarrotes"],
-            ["Abarrotes y semillas","Comercio al por mayor de abarrotes"],["Mini súper","Comercio al por menor de abarrotes"],
-            ["Tiendas de autoservicio de barrio","Comercio al por menor de abarrotes"]]
+      sub:"Abarroteras y negocios de barrio. Los resultados traen nombre, dirección y teléfono (si el directorio lo tiene); tú calificas el tamaño y el consumo.",
+      zona:"", segmento:"Abarrotera",
+      opts:[["Abarrotes y misceláneas","Comercio al por menor de abarrotes",{clase:"461110"}],
+            ["Abarrotes al mayoreo","Comercio al por mayor de abarrotes",{clase:"431110"}],
+            ["Minisúper","Comercio al por menor en minisupers",{clase:"462112"}]]
     },
     wise:{
-      sub:"Naves y plantas con carga industrial. Google no sabe el tamaño: lo estimas al calificar (empleados, turnos, maquinaria).",
-      zona:"León, Gto.", segmento:"Industrial",
-      opts:[["Curtiduría","Curtiduría"],["Fábrica de calzado","Manufactura de calzado"],["Maquiladora","Maquiladora"],
-            ["Manufactura industrial","Manufactura industrial"],["Fundición","Fundición / metalmecánica"],
-            ["Taller industrial","Taller industrial"],["Parque industrial","Parque industrial"]]
+      sub:"Naves y plantas con carga industrial (solo establecimientos de 11 o más personas). El directorio no sabe el consumo: lo estimas al calificar.",
+      zona:"", segmento:"Industrial",
+      opts:[["Curtiduría y piel","Curtiduría",{rama:"3161",min:11}],["Fábrica de calzado","Manufactura de calzado",{rama:"3162",min:11}],
+            ["Metalmecánica (productos metálicos)","Metalmecánica",{subsector:"332",min:11}],["Fundición y metales básicos","Fundición",{subsector:"331",min:11}],
+            ["Plásticos y hule","Manufactura de plástico y hule",{subsector:"326",min:11}],["Industria alimentaria","Industria alimentaria",{subsector:"311",min:11}]]
     }
   };
-  var found = [], nextToken = "", lastQuery = "", lastGiro = "", searching = false, selected = {}, hidden = 0;
+  var found = [], nextToken = "", lastQuery = "", lastGiro = "", lastSpec = null, lastZona = "", lastFuente = "Google Maps", searching = false, selected = {}, hidden = 0;
 
   function dkey(n, d){ return norm(n) + "|" + norm(d).slice(0,14); }
   function phone10(t){ var d = String(t||"").replace(/\D/g,""); return d.length >= 10 ? d.slice(-10) : ""; }
@@ -892,17 +892,17 @@
   }
   function runSearch(more){
     if(searching) return;
-    var g = GIROS[state.brand], gi = $("xGiro").value, term, giroName;
-    if(gi === "other"){ term = $("xOther").value.trim(); giroName = term; }
-    else { term = g.opts[+gi][0]; giroName = g.opts[+gi][1]; }
+    var g = GIROS[state.brand], gi = $("xGiro").value, term, giroName, spec;
+    if(gi === "other"){ term = $("xOther").value.trim(); giroName = term; spec = {nombre:term}; }
+    else { term = g.opts[+gi][0]; giroName = g.opts[+gi][1]; spec = g.opts[+gi][2]; }
     var zona = $("xZona").value.trim();
     if(!term){ toast("Escribe qué quieres buscar."); return; }
     if(!navigator.onLine){ toast("Sin internet: la búsqueda necesita conexión."); return; }
     var query = term + (zona ? " en " + zona : "");
-    if(!more){ resetResults(); lastQuery = query; lastGiro = giroName; }
+    if(!more){ resetResults(); lastQuery = query; lastGiro = giroName; lastSpec = spec; lastZona = zona; }
     searching = true; $("xGo").disabled = true; $("xMore").disabled = true;
     $("xInfo").textContent = "Buscando…";
-    apiPost({token:cfg.token, action:"buscar", query:lastQuery, pageToken:more ? nextToken : ""}).then(function(d){
+    apiPost({token:cfg.token, action:"buscar", query:lastQuery, denue:lastSpec, zona:lastZona, pageToken:more ? nextToken : ""}).then(function(d){
       if(!d.ok) throw new Error(d.error || "El script rechazó la búsqueda");
       var have = {}; found.forEach(function(c){ have[c.placeId] = 1; });
       var fresh = 0;
@@ -912,7 +912,7 @@
         found.push(c); selected[c.placeId] = true; fresh++;
       });
       hidden += d.enHoja || 0;
-      nextToken = d.nextPageToken || "";
+      nextToken = d.nextPageToken || ""; if(d.fuente) lastFuente = d.fuente;
       $("xInfo").textContent = found.length
         ? found.length + " nuevos" + (hidden ? " · " + hidden + " ya los tenías (omitidos)" : "") + ". Desmarca los que no te sirvan."
         : "No encontré nuevos" + (hidden ? " (" + hidden + " ya los tenías)" : "") + ". Prueba otra colonia o giro" + (nextToken ? ", o toca «Ver más»." : ".");
@@ -931,7 +931,7 @@
     found.forEach(function(c){
       if(!selected[c.placeId] || isKnown(c)) return;
       addNew(blank({brand:state.brand, nombre:c.nombre, giro:lastGiro, segmento:g.segmento,
-        direccion:c.direccion, telefono:c.telefono, fuente:"Google Maps"}));
+        direccion:c.direccion, telefono:c.telefono, fuente:lastFuente, notas:c.tamano ? "Tamaño en directorio: " + c.tamano : ""}));
       n++;
     });
     persist(); state.size = "all"; state.estatus = "all"; state.q = ""; $("q").value = "";
@@ -1215,7 +1215,7 @@
     toast("Probando conexión…");
     apiPost({token:token, action:"ping"}).then(function(d){
       if(!d.ok) throw new Error(d.error || "El script rechazó la prueba");
-      lastError = ""; toast("Conectado a la pestaña «" + d.tab + "» (" + d.rows + " filas)." + (d.places === false ? " Falta PLACES_KEY para buscar nuevos." : "")); updateStatus(); scheduleFull();
+      lastError = ""; toast("Conectado a la pestaña «" + d.tab + "» (" + d.rows + " filas)." + (d.places === false && d.denue === false ? " Falta DENUE_TOKEN (gratis) o PLACES_KEY para buscar nuevos." : "")); updateStatus(); scheduleFull();
     }).catch(function(e){ lastError = e.message; toast("No conectó: " + e.message); updateStatus(); });
   });
   $("sSyncNow").addEventListener("click", function(){ closeSheets(); syncAll(true); });

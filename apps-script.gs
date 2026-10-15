@@ -19,8 +19,9 @@
  *    En Ajustes → Código escribe el mismo CÓDIGO que pusiste aquí.
  *
  * 5. (Para "Buscar nuevos") Configuración del proyecto (engrane) → Propiedades del script →
- *    Agregar propiedad: PLACES_KEY = tu llave de Google Maps Platform (Places API (New)).
- *    Limita la llave solo a Places API y pon una alerta de presupuesto en Google Cloud.
+ *    OPCIÓN GRATIS: DENUE_TOKEN = tu token gratuito de INEGI (directorio oficial de negocios).
+ *    OPCIÓN DE PAGO: PLACES_KEY = tu llave de Google Maps Platform (Places API (New)).
+ *    Si hay las dos, se usa DENUE. Con Google, limita la llave solo a Places API y pon alerta de presupuesto.
  *
  * Si cambias este script después, usa Implementar → Administrar implementaciones →
  * editar → Nueva versión. La URL se conserva.
@@ -52,7 +53,8 @@ function doPost(e) {
       const sh = getSheet_();
       return out_({
         ok: true, tab: TAB, rows: Math.max(0, sh.getLastRow() - 1),
-        places: !!PropertiesService.getScriptProperties().getProperty('PLACES_KEY')
+        places: !!PropertiesService.getScriptProperties().getProperty('PLACES_KEY'),
+        denue: !!PropertiesService.getScriptProperties().getProperty('DENUE_TOKEN')
       });
     }
     if (body.action === 'buscar') return out_(buscar_(body));
@@ -156,9 +158,73 @@ function knownSet_() {
   return { keys: keys, phones: phones };
 }
 
+/* ---------- DENUE (INEGI): gratis, directorio oficial de negocios ---------- */
+const DENUE_URL = 'https://www.inegi.org.mx/app/api/denue/v1/consulta/BuscarAreaActEstr/';
+const DENUE_ENTIDAD = '11';      // Guanajuato
+const DENUE_MUNICIPIO = '020';   // León
+const DENUE_PAGE = 100;          // registros por consulta
+
+function titleCase_(s) {
+  s = String(s || '').trim();
+  if (s !== s.toUpperCase()) return s;   // ya tiene minúsculas: se respeta
+  return s.toLowerCase().replace(/(^|[\s\-\/(.])([a-záéíóúñü])/g, function (m, a, b) { return a + b.toUpperCase(); });
+}
+function digits_(v, max) { const d = String(v || '').replace(/\D/g, ''); return d && d.length <= max ? d : '0'; }
+
+function buscarDenue_(body, token) {
+  const sp = body.denue || {};
+  const nombre = String(sp.nombre || '').trim();
+  const act = [digits_(sp.sector, 2), digits_(sp.subsector, 3), digits_(sp.rama, 4), digits_(sp.clase, 6)];
+  if (!nombre && act.every(function (x) { return x === '0'; })) return { ok: false, error: 'Elige un giro o escribe qué buscar' };
+  const minEmp = Number(sp.min) || 0;
+  const zona = norm_(body.zona || '').replace(/,?\s*leon.*$/, '').trim();
+  const known = knownSet_();
+  const seen = {}, places = [];
+  let enHoja = 0, start = Number(body.pageToken) || 1, next = '', calls = 0, error = '';
+
+  while (calls < 4 && places.length < 20) {
+    calls++;
+    const url = DENUE_URL + [DENUE_ENTIDAD, DENUE_MUNICIPIO, 0, 0, 0].concat(act).concat([
+      nombre ? encodeURIComponent(nombre) : '0', start, start + DENUE_PAGE - 1, 0, 0, token]).join('/');
+    const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const code = res.getResponseCode();
+    let data = null;
+    const txt = res.getContentText() || '';
+    try { data = JSON.parse(txt); } catch (e) { /* no JSON */ }
+    if (code !== 200 || !Array.isArray(data)) {
+      // INEGI responde 200 con [] o error de texto cuando no hay resultados
+      if (code === 200 && /no se encontr|sin resultados/i.test(txt)) { data = []; }
+      else { error = 'INEGI respondió ' + code + ': ' + txt.slice(0, 160); break; }
+    }
+    data.forEach(function (r) {
+      const id = String(r.Id || r.CLEE || '');
+      if (!id || seen[id]) return;
+      seen[id] = 1;
+      const name = titleCase_(r.Nombre || r.Razon_social);
+      if (!name) return;
+      const est = String(r.Estrato || '');
+      const m = est.match(/\d+/);
+      if (minEmp && m && Number(m[0]) < minEmp) return;
+      const calle = [r.Tipo_vialidad, r.Calle, r.Num_Exterior].filter(String).join(' ').trim();
+      const addr = [titleCase_(calle), titleCase_(r.Colonia), r.CP ? 'C.P. ' + r.CP : ''].filter(String).join(', ');
+      if (zona && norm_(addr).indexOf(zona) === -1) return;
+      const tel = String(r.Telefono || '').trim();
+      const ph = phone10_(tel);
+      if (known.keys[nameKey_(name, addr)] || (ph && known.phones[ph])) { enHoja++; return; }
+      places.push({ placeId: id, nombre: name, direccion: addr, telefono: tel, tamano: est, giroReal: String(r.Clase_actividad || '') });
+    });
+    if (data.length >= DENUE_PAGE) { start += DENUE_PAGE; next = String(start); } else { next = ''; break; }
+  }
+  if (error && !places.length) return { ok: false, error: error };
+  return { ok: true, places: places, enHoja: enHoja, cerrados: 0, nextPageToken: next, fuente: 'DENUE (INEGI)' };
+}
+
 function buscar_(body) {
-  const key = PropertiesService.getScriptProperties().getProperty('PLACES_KEY');
-  if (!key) return { ok: false, error: 'Falta PLACES_KEY en las Propiedades del script' };
+  const props = PropertiesService.getScriptProperties();
+  const dtoken = props.getProperty('DENUE_TOKEN');
+  if (dtoken) return buscarDenue_(body, dtoken);
+  const key = props.getProperty('PLACES_KEY');
+  if (!key) return { ok: false, error: 'Falta DENUE_TOKEN (gratis) o PLACES_KEY en las Propiedades del script' };
   const q = String(body.query || '').trim();
   if (!q) return { ok: false, error: 'Escribe qué buscar' };
 
