@@ -347,6 +347,7 @@ textarea{min-height:76px;resize:vertical}
         </div>
         <div class="field">
           <label for="fechaSig">¿Cuándo?</label>
+          <div class="kmeta" id="fechaHint" hidden style="color:var(--warn);font-weight:700">Esta fecha ya pasó: pon la nueva fecha del siguiente paso.</div>
           <input type="date" id="fechaSig">
         </div>
         <div class="field">
@@ -533,6 +534,7 @@ textarea{min-height:76px;resize:vertical}
   }
   function updateObj(){ var e = $("etapa").value; $("objWrap").hidden = !(e === "Perdido" || e === "En pausa"); }
   $("etapa").addEventListener("change", updateObj);
+  $("fechaSig").addEventListener("change", function(){ $("fechaHint").hidden = !($("fechaSig").value && $("fechaSig").value <= hoyISO()); });
 
   var refris = 0;
   function setRef(n){ refris = Math.max(0, Math.min(40, n)); $("refOut").textContent = refris; }
@@ -545,7 +547,7 @@ textarea{min-height:76px;resize:vertical}
     ["quien","aire","reciboVisto","paso"].forEach(function(n){ setChip(n,""); });
     setChip("registro","visita"); setRef(0);
     $("zona").value = ""; $("tipo").value = "Comercial"; $("origen").value = "Frío"; $("etapa").value = "Contactado";
-    $("origenWrap").hidden = false; $("docWrap").hidden = true; $("btnBorrar").hidden = true; $("btnNuevo").hidden = true;
+    $("origenWrap").hidden = false; $("docWrap").hidden = true; $("fechaHint").hidden = true; $("btnBorrar").hidden = true; $("btnNuevo").hidden = true;
     $("btnBorrar").textContent = "Borrar (aún no se envía)";
     $("formTitle").textContent = "Registrar visita"; $("formSub").textContent = "Llénalo en 1 minuto, al salir del negocio.";
     updateObj(); updateRegistroUI();
@@ -564,6 +566,7 @@ textarea{min-height:76px;resize:vertical}
     $("formTitle").textContent = it.negocio;
     $("formSub").textContent = (it.key ? "En tu hoja" : "Nuevo, aún no está en tu hoja") + (it.ultimoContacto ? " · último contacto " + fmtFecha(it.ultimoContacto) : "");
     $("btnBorrar").hidden = !!it.key; $("btnNuevo").hidden = false; $("msg").textContent = "";
+    $("fechaHint").hidden = !(it.fechaSig && it.fechaSig <= hoyISO() && isOpen(it));
     updateObj(); updateRegistroUI();
     show("registrar");
   }
@@ -660,12 +663,16 @@ textarea{min-height:76px;resize:vertical}
   var visitedToday = function(it){ var h = hoyISO(); return it.lastVisit === h || it.extra.visitado === h; };
   var util = function(it){ return it.extra.quien === "encargado" || !!it.encargado || !!it.extra.horario || !!it.contacto || it.extra.reciboVisto === "si"; };
   var isOpen = function(it){ return !CLOSED[it.etapa]; };
+  // Igual que "Resumen del día": si ya hubo contacto en o después de la fecha del siguiente paso, ya no está pendiente.
+  var atendido = function(it){ return !!(it.ultimoContacto && it.fechaSig && it.ultimoContacto >= it.fechaSig); };
+  var vencido = function(it){ var h = hoyISO(); return isOpen(it) && !!it.fechaSig && it.fechaSig <= h && !atendido(it); };
 
   function badge(it){
     if(it.etapa === "Perdido") return '<span class="badge lost">Perdido</span>';
     if(it.etapa === "Ganado") return '<span class="badge won">Ganado</span>';
     if(!it.fechaSig) return it.etapa && it.etapa !== "Sin contactar" ? '<span class="badge">'+esc(it.etapa)+'</span>' : "";
     var h = hoyISO();
+    if(atendido(it) && it.fechaSig <= h) return '<span class="badge">Atendido · falta nueva fecha</span>';
     if(it.fechaSig < h) return '<span class="badge late">Atrasado · '+esc(fmtFecha(it.fechaSig))+'</span>';
     if(it.fechaSig === h) return '<span class="badge today">Hoy</span>';
     return '<span class="badge">'+esc(fmtFecha(it.fechaSig))+'</span>';
@@ -711,7 +718,7 @@ textarea{min-height:76px;resize:vertical}
     renderSemana();
 
     var base = store.items.filter(function(it){
-      if(filtro === "hoy") return isOpen(it) && it.fechaSig && it.fechaSig <= h;
+      if(filtro === "hoy") return vencido(it);
       if(filtro === "porvisitar") return isOpen(it) && it.etapa === "Sin contactar" && !it.extra.visitado && it.extra.paso !== "descartar";
       if(filtro === "pend") return isOpen(it) && !!it.fechaSig;
       if(filtro === "visitados") return visitedToday(it);
@@ -834,7 +841,7 @@ textarea{min-height:76px;resize:vertical}
     $("wFunnel").innerHTML = rowsHTML(cnt, fm);
     var pond = store.items.reduce(function(s,it){ return s + (!CLOSED[it.etapa] && it.comPond ? Number(it.comPond) : 0); }, 0);
     var ganada = store.items.reduce(function(s,it){ return s + (it.etapa === "Ganado" && it.comision ? Number(it.comision) : 0); }, 0);
-    var atr = store.items.filter(function(it){ return !CLOSED[it.etapa] && it.fechaSig && it.fechaSig < h; }).length;
+    var atr = store.items.filter(function(it){ return vencido(it) && it.fechaSig < h; }).length;
     $("wPond").textContent = "Comisión ponderada en juego: " + money(pond) + (ganada ? " · ganada: " + money(ganada) : "") +
       (store.metaMensual ? " · meta mensual: " + money(store.metaMensual) : "") + (atr ? " · " + atr + " seguimientos atrasados" : "");
     $("wNote").textContent = usarHoja ? "Esta semana se muestra con lo que capturaste en la pestaña «Actividad semanal»."
@@ -848,7 +855,7 @@ textarea{min-height:76px;resize:vertical}
     var base = store.items.filter(function(it){ return it.etapa && it.etapa !== "Sin contactar" && it.etapa !== "En pausa" && !CLOSED[it.etapa]; });
     var conFecha = base.filter(function(it){ return !!it.fechaSig; });
     var sinFecha = base.length - conFecha.length;
-    var lista = conFecha.map(function(it){ return {it:it, d:Math.max(0, dayDiff(h, it.fechaSig))}; });
+    var lista = conFecha.map(function(it){ return {it:it, d:atendido(it) ? 0 : Math.max(0, dayDiff(h, it.fechaSig))}; });
     var card = $("kAtrCard");
     if(!lista.length){ $("kAtr").textContent = "—"; $("kAtrMeta").textContent = "Meta: menos de 2 días · aún no hay prospectos contactados con siguiente paso"; card.className = "kpi atraso"; $("kAtrList").innerHTML = ""; $("kAtrBar").style.width = "0%"; return; }
     var prom = lista.reduce(function(s,x){ return s + x.d; }, 0) / lista.length;
