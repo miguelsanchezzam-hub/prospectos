@@ -528,7 +528,7 @@ textarea{min-height:76px;resize:vertical}
     }
   }
   function updateRegistroUI(){
-    var r = chipVal.registro || "visita";
+    var r = chipVal.registro || "";
     $("quienWrap").hidden = r !== "visita";
     $("btnGuardar").textContent = editId ? "Guardar cambios" : (r === "visita" ? "Guardar visita" : "Guardar");
   }
@@ -545,7 +545,7 @@ textarea{min-height:76px;resize:vertical}
   function limpiar(){
     $("f").reset(); editId = null; confirmDel = false;
     ["quien","aire","reciboVisto","paso"].forEach(function(n){ setChip(n,""); });
-    setChip("registro","visita"); setRef(0);
+    setChip("registro",""); setRef(0);
     $("zona").value = ""; $("tipo").value = "Comercial"; $("origen").value = "Frío"; $("etapa").value = "Contactado";
     $("origenWrap").hidden = false; $("docWrap").hidden = true; $("fechaHint").hidden = true; $("btnBorrar").hidden = true; $("btnNuevo").hidden = true;
     $("btnBorrar").textContent = "Borrar (aún no se envía)";
@@ -560,7 +560,6 @@ textarea{min-height:76px;resize:vertical}
     $("tipo").value = it.tipo || "Comercial"; $("etapa").value = it.etapa || "Sin contactar"; $("objecion").value = it.objecion || "";
     ["quien","aire","reciboVisto","paso"].forEach(function(n){ setChip(n, it.extra[n]); });
     setRef(Number(it.extra.refris)||0);
-    setChip("registro", "visita");
     $("origenWrap").hidden = !!it.key;
     if(it.comentarios){ $("docNote").textContent = it.comentarios; $("docWrap").hidden = false; }
     $("formTitle").textContent = it.negocio;
@@ -594,7 +593,12 @@ textarea{min-height:76px;resize:vertical}
       if(dup){ msg.className = "msg err"; msg.textContent = "Ya tienes «" + dup.negocio + "». Búscalo en Seguimiento para registrar ahí."; return; }
       it = blankItem(); it.origen = $("origen").value; store.items.push(it);
     }
-    var registro = chipVal.registro || "visita";
+    var registro = chipVal.registro || "";
+    if(!registro){
+      if(isNew) store.items = store.items.filter(function(x){ return x !== it; });
+      msg.className = "msg err"; msg.textContent = "Elige arriba qué registras: Visita, WhatsApp o llamada, o Solo actualizar datos.";
+      window.scrollTo({top:0, behavior:"smooth"}); return;
+    }
     var hoy = hoyISO();
     var etapaAntes = isNew ? "" : it.etapa;
     var p = it.pending || {changes:{}, extra:{}, contactoFecha:"", nota:"", notaFecha:""};
