@@ -52,12 +52,22 @@ const COLS = {
   kw: ['tamano (kw)'],
   objecion: ['objecion principal'],
   fechaCierre: ['fecha de cierre'],
-  comentarios: ['comentarios']
+  comentarios: ['comentarios'],
+  comision: ['comision (mxn)'],
+  comPond: ['comision ponderada (mxn)'],
+  prob: ['probabilidad']
 };
 const DATE_FIELDS = { fechaInicio: 1, ultimoContacto: 1, fechaSig: 1, fechaCierre: 1 };
 const EXTRA_HEADERS = ['Clave', 'Negocio', 'Quién atendió', 'Horario', 'Refrigeradores',
   'Aire acondicionado', 'Recibo visto', 'Paso', 'Primera visita', 'Actualizado'];
 const EXTRA_KEYS = ['quien', 'horario', 'refris', 'aire', 'reciboVisto', 'paso', 'visitado'];
+// Bitácora de cada visita/llamada registrada en la app (para las métricas de la semana).
+const LOG_TAB = 'Registro de visitas';
+const LOG_HEADERS = ['ID', 'Fecha', 'Hora', 'Tipo', 'Negocio', 'Clave', 'Quién atendió', 'Útil',
+  'Recibo visto', 'Etapa antes', 'Etapa después', 'Nuevo', 'Zona'];
+const LOG_KEYS = ['id', 'fecha', 'hora', 'tipo', 'negocio', 'key', 'quien', 'util', 'reciboVisto',
+  'etapaAntes', 'etapaDespues', 'nuevo', 'zona'];
+const LOG_DAYS = 200;   // días de historia que se mandan a la app
 
 function doGet() {
   return out_({ ok: true, msg: 'Ruta de visitas: script activo' });
@@ -198,10 +208,15 @@ function pull_() {
       objecion: text_(get(row, 'objecion')),
       fechaCierre: iso_(get(row, 'fechaCierre')),
       comentarios: text_(get(row, 'comentarios')),
+      comision: num_(get(row, 'comision')),
+      comPond: num_(get(row, 'comPond')),
+      prob: num_(get(row, 'prob')),
       extra: extra
     });
   });
-  return { ok: true, items: items, at: new Date().toISOString() };
+  const res = { ok: true, items: items, log: readLog_(), at: new Date().toISOString() };
+  try { Object.assign(res, metas_()); } catch (e) { res.semanas = []; }
+  return res;
 }
 
 /* ---------------- escritura ---------------- */
@@ -311,8 +326,99 @@ function push_(items) {
     }
     results.push({ id: it.id, key: row.key, fila: row.r, nuevo: created });
   });
+  const logged = appendLog_(items);
   SpreadsheetApp.flush();
-  return { ok: true, results: results };
+  return { ok: true, results: results, logged: logged };
+}
+
+/* ---------------- bitácora y metas ---------------- */
+function logSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(LOG_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(LOG_TAB);
+    sh.getRange(1, 1, sh.getMaxRows(), LOG_HEADERS.length).setNumberFormat('@');
+    sh.getRange(1, 1, 1, LOG_HEADERS.length).setValues([LOG_HEADERS])
+      .setFontWeight('bold').setBackground('#1F4E78').setFontColor('#FFFFFF');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function appendLog_(items) {
+  const entries = [];
+  items.forEach(function (it) { (it && it.log || []).forEach(function (l) { if (l && l.id && l.fecha) entries.push(l); }); });
+  if (!entries.length) return 0;
+  const sh = logSheet_();
+  const last = sh.getLastRow();
+  const have = {};
+  if (last > 1) sh.getRange(2, 1, last - 1, 1).getValues().forEach(function (r) { if (r[0]) have[String(r[0])] = 1; });
+  const rows = entries.filter(function (l) { return !have[l.id]; }).map(function (l) {
+    if (!l.key) l.key = keyOf_(l.negocio);
+    return LOG_KEYS.map(function (k) {
+      const v = l[k];
+      if (v === true) return 'sí';
+      if (v === false) return 'no';
+      return v === null || v === undefined ? '' : String(v);
+    });
+  });
+  if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, LOG_HEADERS.length).setValues(rows);
+  return rows.length;
+}
+
+function readLog_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName(LOG_TAB);
+  if (!sh || sh.getLastRow() < 2) return [];
+  const desde = Utilities.formatDate(new Date(Date.now() - LOG_DAYS * 864e5), tz_(), 'yyyy-MM-dd');
+  const out = [];
+  sh.getRange(2, 1, sh.getLastRow() - 1, LOG_HEADERS.length).getValues().forEach(function (r) {
+    const o = {};
+    LOG_KEYS.forEach(function (k, i) { o[k] = text_(r[i]); });
+    o.fecha = iso_(r[1]) || o.fecha;
+    if (!o.id || !o.fecha || o.fecha < desde) return;
+    o.util = o.util === 'sí'; o.nuevo = o.nuevo === 'sí';
+    out.push(o);
+  });
+  return out;
+}
+
+// Metas por semana (pestaña "Actividad semanal") y meta mensual de comisión (Listas!B8).
+const MESES = { ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, oct: 9, nov: 10, dic: 11 };
+function metas_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const out = { semanas: [], metaMensual: null };
+  const li = ss.getSheetByName('Listas');
+  if (li) out.metaMensual = num_(li.getRange('B8').getValue());
+  const ac = ss.getSheetByName('Actividad semanal');
+  if (!ac) return out;
+  const d = ac.getDataRange().getValues();
+  let hi = -1;
+  for (let i = 0; i < Math.min(12, d.length); i++) if (norm_(d[i][0]) === 'semana') { hi = i; break; }
+  if (hi < 0) return out;
+  let base = null;
+  for (let i = hi + 1; i < d.length; i++) {
+    if (!/^\s*\d+\s*$/.test(String(d[i][0]))) break;
+    const n = Number(d[i][0]);
+    const txt = norm_(d[i][1]);
+    let inicio = '';
+    const m = txt.match(/^(\d{1,2})(?:\s+([a-z]{3}))?/);
+    const mm = txt.match(/([a-z]{3})\s*$/);
+    if (m) {
+      const mes = m[2] && MESES[m[2]] !== undefined ? MESES[m[2]] : (mm ? MESES[mm[1]] : undefined);
+      if (mes !== undefined) {
+        let y = new Date().getFullYear();
+        if (base && mes < base.getMonth() - 6) y = base.getFullYear() + 1;
+        else if (base) y = base.getFullYear();
+        const dt = new Date(y, mes, Number(m[1]), 12);
+        if (!base) base = dt;
+        inicio = Utilities.formatDate(dt, tz_(), 'yyyy-MM-dd');
+      }
+    }
+    out.semanas.push({ n: n, fechas: text_(d[i][1]), inicio: inicio, vMeta: num_(d[i][2]), vReal: num_(d[i][3]),
+      eMeta: num_(d[i][5]), eReal: num_(d[i][6]) });
+  }
+  return out;
 }
 
 function out_(obj) {

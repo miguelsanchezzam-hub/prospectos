@@ -109,6 +109,29 @@ textarea{min-height:76px;resize:vertical}
 .empty{color:var(--muted);font-size:15px;text-align:center;padding:12px}
 .note{font-size:13px;color:var(--muted);text-align:center}
 
+.weekhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.wtitle{text-align:center;flex:1}
+.wtitle h2{margin:0}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi.big{grid-column:span 1}
+.klabel{font-size:13px;font-weight:700;color:var(--muted);line-height:1.2}
+.knum{font-size:30px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+.knum small{font-size:16px;color:var(--muted);font-weight:700}
+.kmeta{font-size:13px;color:var(--muted)}
+.days{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:end;height:130px}
+.day{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.day .col{width:100%;max-width:34px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#FFD400,#F5781C);min-height:3px}
+.day .col.zero{background:var(--line)}
+.day .n{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.day .d{font-size:12px;color:var(--muted);font-weight:700}
+.day.today .d{color:var(--ink)}
+.rows{display:flex;flex-direction:column;gap:8px}
+.r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;font-size:15px}
+.r .rb{grid-column:1/-1;height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.r .rb i{display:block;height:100%;background:var(--accent)}
+.r .rv{font-weight:800;font-variant-numeric:tabular-nums}
+.r .rn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
 .tabbar button{background:none;border:0;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;font-weight:700;color:var(--muted)}
 .tabbar svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -146,42 +169,41 @@ textarea{min-height:76px;resize:vertical}
     <div class="bar"><i id="sBar"></i></div>
   </div>
 
-  <!-- GUION -->
-  <section class="view" id="v-guion" hidden>
-    <div><h2>Qué decir</h2><p class="sub">Toca "Copiar" para pegarlo en WhatsApp o en tus notas.</p></div>
-    <article class="script">
-      <span class="tag">Al entrar</span>
-      <p>"Buenas tardes, ¿se encuentra el dueño o el encargado?"</p>
-      <div class="why">Pregunta directo. Si te dicen que no está, pasa al siguiente guion.</div>
-    </article>
-    <article class="script">
-      <span class="tag warn">No está el encargado</span>
-      <p>"Soy Miguel, de Bajío Sustentable. Ando visitando los negocios de la zona que tienen refrigeradores, porque muchos están pagando de más en la luz sin saberlo."</p>
-      <ol>
-        <li>"¿Cómo se llama el dueño?"</li>
-        <li>"¿A qué hora lo encuentro normalmente?"</li>
-        <li>"¿Me regala un WhatsApp para mandarle la información? Si no, le dejo mi tarjeta y este folleto."</li>
-        <li>"¿De casualidad tiene a la mano el recibo de luz? Solo quiero ver en qué tarifa están."</li>
-      </ol>
-      <div class="why">Tu meta aquí es salir con nombre y horario. Con eso, la visita ya valió la pena.</div>
-      <button class="btn small" data-copy="Soy Miguel, de Bajío Sustentable. Ando visitando los negocios de la zona que tienen refrigeradores, porque muchos están pagando de más en la luz sin saberlo. ¿Cómo se llama el dueño? ¿A qué hora lo encuentro normalmente? ¿Me regala un WhatsApp para mandarle la información? ¿De casualidad tiene a la mano el recibo de luz?">Copiar</button>
-    </article>
-    <article class="script">
-      <span class="tag ok">Sí está el encargado</span>
-      <p>"Buenas, soy Miguel de Bajío Sustentable. Estoy visitando negocios de la zona porque muchos con refrigeración están pagando tarifa alta de CFE sin saberlo. ¿Me deja ver su último recibo? En 2 minutos le digo si le conviene o no."</p>
-      <button class="btn small" data-copy="Buenas, soy Miguel de Bajío Sustentable. Estoy visitando negocios de la zona porque muchos con refrigeración están pagando tarifa alta de CFE sin saberlo. ¿Me deja ver su último recibo? En 2 minutos le digo si le conviene o no.">Copiar</button>
-    </article>
-    <article class="script">
-      <span class="tag">Cuando regresas</span>
-      <p>"Buenas, vengo a ver a Don [nombre]. Me dijeron que a esta hora lo encontraba."</p>
-      <div class="why">Ya no llegas en frío: llegas con alguien que te espera.</div>
-    </article>
-    <article class="script">
-      <span class="tag">WhatsApp al dueño</span>
-      <p>"Hola Don [nombre], soy Miguel de Bajío Sustentable. Hoy pasé a su negocio y me atendió [empleado]. Muchos negocios con refrigeradores están pagando tarifa alta de CFE. Si me manda una foto de su último recibo, le digo en 2 minutos si le conviene un sistema solar o no. ¿Qué día le puedo visitar?"</p>
-      <button class="btn small" data-copy="Hola Don [nombre], soy Miguel de Bajío Sustentable. Hoy pasé a su negocio y me atendió [empleado]. Muchos negocios con refrigeradores están pagando tarifa alta de CFE. Si me manda una foto de su último recibo, le digo en 2 minutos si le conviene un sistema solar o no. ¿Qué día le puedo visitar?">Copiar</button>
-    </article>
-    <div class="tip"><b>Antes de salir:</b> que tu ruta de mañana quede lista desde la noche anterior. Solo piensa en llegar a la primera.</div>
+  <!-- SEMANA -->
+  <section class="view" id="v-semana" hidden>
+    <div class="weekhead">
+      <button type="button" class="iconbtn" id="wPrev" aria-label="Semana anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="wtitle"><h2 id="wTitle">Tu semana</h2><div class="sub" id="wRange"></div></div>
+      <button type="button" class="iconbtn" id="wNext" aria-label="Semana siguiente"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <div class="kpis">
+      <div class="kpi big"><div class="klabel">Visitas</div><div class="knum" id="kVis">0</div><div class="kmeta" id="kVisMeta"></div><div class="bar"><i id="kVisBar"></i></div></div>
+      <div class="kpi big"><div class="klabel">Estimados enviados</div><div class="knum" id="kEst">0</div><div class="kmeta" id="kEstMeta"></div><div class="bar"><i id="kEstBar"></i></div></div>
+      <div class="kpi"><div class="klabel">Contactos útiles</div><div class="knum" id="kUtil">0</div><div class="kmeta" id="kUtilPct"></div></div>
+      <div class="kpi"><div class="klabel">Con encargado</div><div class="knum" id="kEnc">0</div><div class="kmeta" id="kEncPct"></div></div>
+      <div class="kpi"><div class="klabel">Recibos vistos</div><div class="knum" id="kRec">0</div></div>
+      <div class="kpi"><div class="klabel">Llamadas y WhatsApp</div><div class="knum" id="kLla">0</div></div>
+      <div class="kpi"><div class="klabel">Negocios nuevos</div><div class="knum" id="kNew">0</div></div>
+      <div class="kpi"><div class="klabel">Avances de etapa</div><div class="knum" id="kAdv">0</div></div>
+    </div>
+    <div class="group">
+      <div class="label">Visitas por día</div>
+      <div class="days" id="wDays"></div>
+    </div>
+    <div class="group" id="wZonasWrap">
+      <div class="label">Visitas por zona</div>
+      <div id="wZonas" class="rows"></div>
+    </div>
+    <div class="group" id="wAvWrap" hidden>
+      <div class="label">Avances de la semana</div>
+      <div id="wAv" class="rows"></div>
+    </div>
+    <div class="group">
+      <div class="label">Tu embudo hoy</div>
+      <div id="wFunnel" class="rows"></div>
+      <div class="kmeta" id="wPond"></div>
+    </div>
+    <p class="note" id="wNote"></p>
   </section>
 
   <!-- REGISTRAR -->
@@ -358,8 +380,8 @@ textarea{min-height:76px;resize:vertical}
 </div>
 
 <nav class="tabbar" role="tablist">
-  <button role="tab" data-v="guion" aria-selected="false">
-    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Guion
+  <button role="tab" data-v="semana" aria-selected="false">
+    <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Semana
   </button>
   <button role="tab" data-v="registrar" aria-selected="false">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Registrar
@@ -422,11 +444,13 @@ textarea{min-height:76px;resize:vertical}
   $("hoyFecha").textContent = new Date().toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"});
 
   /* ============ Almacenamiento local ============ */
-  var store = {v:1, items:[], lastPull:""};
+  var store = {v:1, items:[], log:[], semanas:[], metaMensual:null, lastPull:""};
   var cfg = {url:"", token:""};
   function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){ toast("No pude guardar en este teléfono. Revisa el espacio o el modo privado."); } }
   function load(){
     try{ var r = localStorage.getItem(KEY); if(r){ var d = JSON.parse(r); if(d && Array.isArray(d.items)) store = d; } }catch(e){}
+    if(!Array.isArray(store.log)) store.log = [];
+    if(!Array.isArray(store.semanas)) store.semanas = [];
     try{ var c = localStorage.getItem(KEY_CFG); if(c){ var o = JSON.parse(c); cfg.url = o.url||""; cfg.token = o.token||""; } }catch(e){}
   }
   function saveCfg(){ try{ localStorage.setItem(KEY_CFG, JSON.stringify(cfg)); }catch(e){} }
@@ -442,7 +466,7 @@ textarea{min-height:76px;resize:vertical}
   /* ============ Vistas ============ */
   function show(v){
     qsa(".tabbar button").forEach(function(b){ b.setAttribute("aria-selected", b.getAttribute("data-v")===v ? "true":"false"); });
-    ["guion","registrar","lista"].forEach(function(k){ $("v-"+k).hidden = k!==v; });
+    ["semana","registrar","lista"].forEach(function(k){ $("v-"+k).hidden = k!==v; });
     try{ localStorage.setItem(KEY_TAB, v); }catch(e){}
     window.scrollTo(0,0);
   }
@@ -558,6 +582,7 @@ textarea{min-height:76px;resize:vertical}
     }
     var registro = chipVal.registro || "visita";
     var hoy = hoyISO();
+    var etapaAntes = isNew ? "" : it.etapa;
     var p = it.pending || {changes:{}, extra:{}, contactoFecha:"", nota:"", notaFecha:""};
     if(isNew){ p.changes.origen = it.origen; }
     // Campos de la hoja: solo se envía lo que cambió respecto a lo último que vino de la hoja.
@@ -582,6 +607,14 @@ textarea{min-height:76px;resize:vertical}
       it.comentarios = it.comentarios ? it.comentarios + "\n" + line : line;
     }
     if(registro === "visita") it.lastVisit = hoy;
+    // Bitácora para las métricas de la semana
+    if(registro !== "nota" || etapaAntes !== it.etapa){
+      var dt = new Date();
+      store.log.push({id:uid(), itemId:it.id, fecha:hoy, hora:pad(dt.getHours())+":"+pad(dt.getMinutes()),
+        tipo:registro === "nota" ? "actualización" : registro, negocio:it.negocio, key:it.key,
+        quien:registro === "visita" ? (chipVal.quien||"") : "", util:registro === "nota" ? false : util(it),
+        reciboVisto:chipVal.reciboVisto||"", etapaAntes:etapaAntes, etapaDespues:it.etapa, nuevo:isNew, zona:it.zona, sent:false});
+    }
     it.pending = p; it.updated = nowIso();
     persist();
     var name = it.negocio;
@@ -659,11 +692,12 @@ textarea{min-height:76px;resize:vertical}
 
   function render(){
     var h = hoyISO();
-    var deHoy = store.items.filter(visitedToday);
+    var deHoy = store.log.filter(function(l){ return l.fecha === h && l.tipo === "visita"; });
     $("sVis").innerHTML = deHoy.length + "<small>/" + META + "</small>";
-    $("sUtil").textContent = deHoy.filter(util).length;
-    $("sEnc").textContent = deHoy.filter(function(it){ return it.extra.quien === "encargado"; }).length;
+    $("sUtil").textContent = deHoy.filter(function(l){ return l.util; }).length;
+    $("sEnc").textContent = deHoy.filter(function(l){ return l.quien === "encargado"; }).length;
     $("sBar").style.width = Math.min(100, deHoy.length / META * 100) + "%";
+    renderSemana();
 
     var base = store.items.filter(function(it){
       if(filtro === "hoy") return isOpen(it) && it.fechaSig && it.fechaSig <= h;
@@ -712,6 +746,91 @@ textarea{min-height:76px;resize:vertical}
     e.preventDefault(); var it = byId(c.getAttribute("data-id")); if(it) cargar(it);
   });
 
+
+  /* ============ Semana (métricas) ============ */
+  var ETAPAS = ["Sin contactar","Contactado","Visita hecha","Recibo recibido","Estimado enviado","Crédito / negociación","Ganado"];
+  var wOff = 0;
+  function isoOf(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function weekStart(off){
+    var d = new Date(); d.setHours(12,0,0,0);
+    var dow = (d.getDay() + 6) % 7;            // 0 = lunes
+    d.setDate(d.getDate() - dow + 7*off);
+    return d;
+  }
+  var money = function(n){ return "$" + Math.round(n).toLocaleString("es-MX"); };
+  function rowsHTML(list, max){
+    return list.map(function(x){
+      return '<div class="r"><span class="rn">'+esc(x[0])+'</span><span class="rv">'+esc(x[1])+'</span>' +
+        (max ? '<div class="rb"><i style="width:'+Math.round(100*Number(x[2]!==undefined?x[2]:x[1])/max)+'%"></i></div>' : '') + '</div>';
+    }).join("");
+  }
+  function renderSemana(){
+    var ini = weekStart(wOff), dias = [];
+    for(var i=0;i<7;i++){ var d = new Date(ini); d.setDate(ini.getDate()+i); dias.push(isoOf(d)); }
+    var a = dias[0], z = dias[6], h = hoyISO();
+    var fmt = function(iso, o){ var p = iso.split("-").map(Number); return new Date(p[0],p[1]-1,p[2]).toLocaleDateString("es-MX", o); };
+    $("wTitle").textContent = wOff === 0 ? "Esta semana" : (wOff === -1 ? "Semana pasada" : (wOff > 0 ? "Semana próxima" : "Hace " + (-wOff) + " semanas"));
+    $("wRange").textContent = fmt(a,{day:"numeric",month:"short"}) + " al " + fmt(dias[5],{day:"numeric",month:"short"});
+    $("wNext").disabled = wOff >= 0;
+
+    var L = store.log.filter(function(l){ return l.fecha >= a && l.fecha <= z; });
+    var vis = L.filter(function(l){ return l.tipo === "visita"; });
+    var est = L.filter(function(l){ return l.etapaDespues === "Estimado enviado" && l.etapaAntes !== "Estimado enviado"; });
+    var adv = L.filter(function(l){ var i0 = ETAPAS.indexOf(l.etapaAntes), i1 = ETAPAS.indexOf(l.etapaDespues); return i1 > i0 && i0 >= 0 && !l.nuevo; });
+    var sem = store.semanas.filter(function(s){ return s.inicio === a; })[0];
+    var usarHoja = !L.length && sem && (sem.vReal != null || sem.eReal != null);
+    var nVis = usarHoja ? (sem.vReal||0) : vis.length, nEst = usarHoja ? (sem.eReal||0) : est.length;
+
+    $("kVis").innerHTML = nVis + (sem && sem.vMeta ? "<small>/" + sem.vMeta + "</small>" : "");
+    $("kVisMeta").textContent = sem && sem.vMeta ? Math.round(100*nVis/sem.vMeta) + "% de la meta · semana " + sem.n : "Sin meta para esta semana";
+    $("kVisBar").style.width = (sem && sem.vMeta ? Math.min(100, 100*nVis/sem.vMeta) : 0) + "%";
+    $("kEst").innerHTML = nEst + (sem && sem.eMeta ? "<small>/" + sem.eMeta + "</small>" : "");
+    $("kEstMeta").textContent = sem && sem.eMeta ? Math.round(100*nEst/sem.eMeta) + "% de la meta" : "Sin meta para esta semana";
+    $("kEstBar").style.width = (sem && sem.eMeta ? Math.min(100, 100*nEst/sem.eMeta) : 0) + "%";
+    var nUtil = vis.filter(function(l){ return l.util; }).length, nEnc = vis.filter(function(l){ return l.quien === "encargado"; }).length;
+    $("kUtil").textContent = usarHoja ? "—" : nUtil;
+    $("kUtilPct").textContent = vis.length ? Math.round(100*nUtil/vis.length) + "% de tus visitas" : "";
+    $("kEnc").textContent = usarHoja ? "—" : nEnc;
+    $("kEncPct").textContent = vis.length ? Math.round(100*nEnc/vis.length) + "% de tus visitas" : "";
+    $("kRec").textContent = usarHoja ? "—" : L.filter(function(l){ return l.reciboVisto === "si"; }).length;
+    $("kLla").textContent = usarHoja ? "—" : L.filter(function(l){ return l.tipo === "llamada"; }).length;
+    $("kNew").textContent = usarHoja ? "—" : L.filter(function(l){ return l.nuevo; }).length;
+    $("kAdv").textContent = usarHoja ? "—" : adv.length;
+
+    var porDia = dias.slice(0,6).map(function(d){ return vis.filter(function(l){ return l.fecha === d; }).length; });
+    var mx = Math.max.apply(null, porDia.concat([1]));
+    var nombres = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+    $("wDays").innerHTML = porDia.map(function(n,i){
+      return '<div class="day'+(dias[i]===h?' today':'')+'"><span class="n">'+(n||"")+'</span><div class="col'+(n?'':' zero')+'" style="height:'+(n?Math.max(8,Math.round(90*n/mx)):3)+'px"></div><span class="d">'+nombres[i]+'</span></div>';
+    }).join("");
+
+    var zc = {}; vis.forEach(function(l){ var k = ZNAME[l.zona] || "Sin zona"; zc[k] = (zc[k]||0) + 1; });
+    var zl = Object.keys(zc).map(function(k){ return [k, zc[k]]; }).sort(function(x,y){ return y[1]-x[1]; });
+    $("wZonasWrap").hidden = !zl.length;
+    $("wZonas").innerHTML = rowsHTML(zl, zl.length ? zl[0][1] : 0);
+
+    var avl = adv.concat(L.filter(function(l){ return l.etapaDespues === "Perdido" && l.etapaAntes !== "Perdido"; }));
+    $("wAvWrap").hidden = !avl.length;
+    $("wAv").innerHTML = avl.map(function(l){
+      return '<div><div style="font-weight:700">'+esc(l.negocio)+'</div><div class="kmeta">'+esc((l.etapaAntes||"Nuevo")+" → "+l.etapaDespues)+' · '+esc(fmtFecha(l.fecha))+'</div></div>';
+    }).join("");
+
+    var abiertos = store.items.filter(function(it){ return !CLOSED[it.etapa] && it.etapa !== "En pausa"; });
+    var cnt = ETAPAS.slice(0,6).map(function(e){ return [e, abiertos.filter(function(it){ return (it.etapa||"Sin contactar") === e; }).length]; })
+      .concat([["En pausa", store.items.filter(function(it){ return it.etapa === "En pausa"; }).length]]);
+    var fm = Math.max.apply(null, cnt.map(function(x){ return x[1]; }).concat([1]));
+    $("wFunnel").innerHTML = rowsHTML(cnt, fm);
+    var pond = store.items.reduce(function(s,it){ return s + (!CLOSED[it.etapa] && it.comPond ? Number(it.comPond) : 0); }, 0);
+    var ganada = store.items.reduce(function(s,it){ return s + (it.etapa === "Ganado" && it.comision ? Number(it.comision) : 0); }, 0);
+    var atr = store.items.filter(function(it){ return !CLOSED[it.etapa] && it.fechaSig && it.fechaSig < h; }).length;
+    $("wPond").textContent = "Comisión ponderada en juego: " + money(pond) + (ganada ? " · ganada: " + money(ganada) : "") +
+      (store.metaMensual ? " · meta mensual: " + money(store.metaMensual) : "") + (atr ? " · " + atr + " seguimientos atrasados" : "");
+    $("wNote").textContent = usarHoja ? "Esta semana se muestra con lo que capturaste en la pestaña «Actividad semanal»."
+      : "Cada visita y llamada que registras queda en la pestaña «Registro de visitas» de tu hoja.";
+  }
+  $("wPrev").addEventListener("click", function(){ wOff--; renderSemana(); });
+  $("wNext").addEventListener("click", function(){ if(wOff < 0){ wOff++; renderSemana(); } });
+
   /* ============ Sincronización con la hoja (ida y vuelta) ============ */
   var syncing = false, lastError = "", syncTimer = null;
   function apiPost(payload){
@@ -730,8 +849,13 @@ textarea{min-height:76px;resize:vertical}
     var items = list.map(function(it){
       var p = it.pending;
       return {id:it.id, key:it.key, negocio:it.negocio, changes:p.changes, extra:p.extra,
-        contactoFecha:p.contactoFecha||"", nota:p.nota||"", notaFecha:p.notaFecha||""};
+        contactoFecha:p.contactoFecha||"", nota:p.nota||"", notaFecha:p.notaFecha||"",
+        log:store.log.filter(function(l){ return !l.sent && l.itemId === it.id; }).map(function(l){
+          var o = {}; Object.keys(l).forEach(function(k){ if(k !== "sent" && k !== "itemId") o[k] = l[k]; });
+          if(!o.key) o.key = it.key; o.negocio = it.negocio; return o; })};
     });
+    var sentLog = {};
+    items.forEach(function(x){ x.log.forEach(function(l){ sentLog[l.id] = 1; }); });
     var sentAt = {};
     list.forEach(function(it){ sentAt[it.id] = it.updated; });
     return apiPost({token:cfg.token, action:"push", items:items}).then(function(d){
@@ -741,6 +865,7 @@ textarea{min-height:76px;resize:vertical}
         it.key = r.key;
         if(it.updated === sentAt[it.id]) it.pending = null;   // si lo editaste mientras se enviaba, queda pendiente
       });
+      store.log.forEach(function(l){ if(sentLog[l.id]) l.sent = true; });
       persist();
       return items.length;
     });
@@ -759,7 +884,7 @@ textarea{min-height:76px;resize:vertical}
         it.key = r.key;
       }
       var p = it.pending;
-      ["negocio","encargado","contacto","zona","ubicacion","tipo","origen","etapa","fechaInicio","ultimoContacto","sigPaso","fechaSig","recibo","kw","objecion","fechaCierre","comentarios"].forEach(function(k){
+      ["negocio","encargado","contacto","zona","ubicacion","tipo","origen","etapa","fechaInicio","ultimoContacto","sigPaso","fechaSig","recibo","kw","objecion","fechaCierre","comentarios","comision","comPond","prob"].forEach(function(k){
         if(p && p.changes && p.changes[k] !== undefined) return;     // tu cambio local aún no se envía
         if(k === "comentarios" && p && p.nota) return;
         if(k === "ultimoContacto" && p && p.contactoFecha) return;
@@ -780,6 +905,12 @@ textarea{min-height:76px;resize:vertical}
   function pull(){
     return apiPost({token:cfg.token, action:"pull"}).then(function(d){
       if(!d.ok) throw new Error(d.error || "El script rechazó la lectura");
+      if(Array.isArray(d.log)){
+        var local = store.log.filter(function(l){ return !l.sent; });
+        store.log = d.log.map(function(l){ l.sent = true; return l; }).concat(local);
+      }
+      if(Array.isArray(d.semanas)) store.semanas = d.semanas;
+      if(d.metaMensual !== undefined) store.metaMensual = d.metaMensual;
       applyPull(d.items || []);
       return (d.items||[]).length;
     });
@@ -856,6 +987,7 @@ textarea{min-height:76px;resize:vertical}
   load();
   limpiar();
   var tab = "lista"; try{ tab = localStorage.getItem(KEY_TAB) || "lista"; }catch(e){}
+  if(tab === "guion") tab = "semana";
   if(tab === "registrar") tab = "lista";
   show(tab);
   render();

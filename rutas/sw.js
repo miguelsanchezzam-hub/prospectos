@@ -1,7 +1,7 @@
 /* Service worker: la app abre sin internet.
    Red primero (para que las actualizaciones lleguen), caché como respaldo.
    Las llamadas al Apps Script (otro dominio) nunca pasan por aquí. */
-const CACHE = 'rutas-v1';
+const CACHE = 'rutas-v3';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
