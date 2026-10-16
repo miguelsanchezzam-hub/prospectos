@@ -115,6 +115,10 @@ textarea{min-height:76px;resize:vertical}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .kpi.big{grid-column:span 1}
+.kpi.atraso.ok{border-color:#BFDDB0;background:#F4FAEF}
+.kpi.atraso.bad{border-color:#F2C3A6;background:#FFF5EE}
+.kpi.atraso.ok .bar i{background:var(--ok)}
+.kpi.atraso.bad .bar i{background:var(--orange)}
 .klabel{font-size:13px;font-weight:700;color:var(--muted);line-height:1.2}
 .knum{font-size:30px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
 .knum small{font-size:16px;color:var(--muted);font-weight:700}
@@ -171,6 +175,13 @@ textarea{min-height:76px;resize:vertical}
 
   <!-- SEMANA -->
   <section class="view" id="v-semana" hidden>
+    <div class="kpi atraso" id="kAtrCard">
+      <div class="klabel">Atraso promedio de tus prospectos (hoy)</div>
+      <div class="knum" id="kAtr">—</div>
+      <div class="kmeta" id="kAtrMeta">Meta: menos de 2 días</div>
+      <div class="bar"><i id="kAtrBar"></i></div>
+      <div class="rows" id="kAtrList"></div>
+    </div>
     <div class="weekhead">
       <button type="button" class="iconbtn" id="wPrev" aria-label="Semana anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="wtitle"><h2 id="wTitle">Tu semana</h2><div class="sub" id="wRange"></div></div>
@@ -221,8 +232,8 @@ textarea{min-height:76px;resize:vertical}
           <span class="flabel">¿Qué registras?</span>
           <div class="chips" data-name="registro">
             <button type="button" class="chip" data-v="visita">Visita</button>
-            <button type="button" class="chip" data-v="llamada">Llamada o WhatsApp</button>
-            <button type="button" class="chip" data-v="nota">Solo actualizar</button>
+            <button type="button" class="chip" data-v="llamada">WhatsApp o llamada</button>
+            <button type="button" class="chip" data-v="nota">Solo actualizar datos</button>
           </div>
         </div>
         <div class="field">
@@ -619,7 +630,7 @@ textarea{min-height:76px;resize:vertical}
     persist();
     var name = it.negocio;
     limpiar();
-    msg.textContent = "Guardado: " + name + (cfg.url ? ". Enviando a tu hoja…" : ". Conecta tu hoja en Ajustes para enviarlo.");
+    msg.textContent = "Guardado: " + name + (registro === "nota" ? " (sin cambiar el último contacto)" : " · último contacto: hoy") + (cfg.url ? ". Enviando a tu hoja…" : ". Conecta tu hoja en Ajustes para enviarlo.");
     render(); scheduleSync();
   });
 
@@ -765,6 +776,7 @@ textarea{min-height:76px;resize:vertical}
     }).join("");
   }
   function renderSemana(){
+    renderAtraso();
     var ini = weekStart(wOff), dias = [];
     for(var i=0;i<7;i++){ var d = new Date(ini); d.setDate(ini.getDate()+i); dias.push(isoOf(d)); }
     var a = dias[0], z = dias[6], h = hoyISO();
@@ -827,6 +839,28 @@ textarea{min-height:76px;resize:vertical}
       (store.metaMensual ? " · meta mensual: " + money(store.metaMensual) : "") + (atr ? " · " + atr + " seguimientos atrasados" : "");
     $("wNote").textContent = usarHoja ? "Esta semana se muestra con lo que capturaste en la pestaña «Actividad semanal»."
       : "Cada visita y llamada que registras queda en la pestaña «Registro de visitas» de tu hoja.";
+  }
+  // Atraso: días que lleva vencido el siguiente paso (0 si va en tiempo).
+  // Solo prospectos ya contactados, abiertos y que no estén en pausa.
+  var dayDiff = function(a, b){ var x = a.split("-").map(Number), y = b.split("-").map(Number); return Math.round((Date.UTC(x[0],x[1]-1,x[2]) - Date.UTC(y[0],y[1]-1,y[2])) / 864e5); };
+  function renderAtraso(){
+    var h = hoyISO(), META_ATR = 2;
+    var base = store.items.filter(function(it){ return it.etapa && it.etapa !== "Sin contactar" && it.etapa !== "En pausa" && !CLOSED[it.etapa]; });
+    var conFecha = base.filter(function(it){ return !!it.fechaSig; });
+    var sinFecha = base.length - conFecha.length;
+    var lista = conFecha.map(function(it){ return {it:it, d:Math.max(0, dayDiff(h, it.fechaSig))}; });
+    var card = $("kAtrCard");
+    if(!lista.length){ $("kAtr").textContent = "—"; $("kAtrMeta").textContent = "Meta: menos de 2 días · aún no hay prospectos contactados con siguiente paso"; card.className = "kpi atraso"; $("kAtrList").innerHTML = ""; $("kAtrBar").style.width = "0%"; return; }
+    var prom = lista.reduce(function(s,x){ return s + x.d; }, 0) / lista.length;
+    var atr = lista.filter(function(x){ return x.d > 0; }).sort(function(a,b){ return b.d - a.d; });
+    $("kAtr").innerHTML = prom.toFixed(1) + "<small> días</small>";
+    card.className = "kpi atraso " + (prom < META_ATR ? "ok" : "bad");
+    $("kAtrMeta").textContent = (prom < META_ATR ? "✓ Por debajo de la meta (menos de 2 días)" : "Arriba de la meta de 2 días") +
+      " · " + lista.length + " prospectos, " + atr.length + " atrasados" + (sinFecha ? " · " + sinFecha + " sin fecha de siguiente paso" : "");
+    $("kAtrBar").style.width = Math.min(100, prom / (META_ATR * 3) * 100) + "%";
+    $("kAtrList").innerHTML = atr.slice(0,5).map(function(x){
+      return '<div class="r"><span class="rn">'+esc(x.it.negocio)+'</span><span class="rv">'+x.d+(x.d === 1 ? ' día' : ' días')+'</span></div>';
+    }).join("") + (atr.length > 5 ? '<div class="kmeta">y ' + (atr.length - 5) + ' más en Seguimiento → Hoy y atrasados</div>' : '');
   }
   $("wPrev").addEventListener("click", function(){ wOff--; renderSemana(); });
   $("wNext").addEventListener("click", function(){ if(wOff < 0){ wOff++; renderSemana(); } });

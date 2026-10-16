@@ -295,14 +295,19 @@ function push_(items) {
       .forEach(function (f) { if (ch[f] !== undefined) setCell_(t, row, f, ch[f]); });
 
     // Contacto registrado (visita, llamada o WhatsApp): último contacto y, si falta, fecha de inicio.
-    if (it.contactoFecha) {
-      setCell_(t, row, 'ultimoContacto', it.contactoFecha);
-      if (!iso_(row.v[t.map.fechaInicio])) setCell_(t, row, 'fechaInicio', it.contactoFecha);
+    // Solo cuenta como contacto una visita o una llamada/WhatsApp (no "Solo actualizar").
+    const contactos = (it.log || []).filter(function (l) { return l && (l.tipo === 'visita' || l.tipo === 'llamada') && l.fecha; })
+      .map(function (l) { return l.fecha; }).sort();
+    const contactoFecha = it.contactoFecha || contactos.pop() || '';
+    if (contactoFecha) {
+      const curIso = iso_(row.v[t.map.ultimoContacto]);
+      if (!curIso || contactoFecha > curIso) setCell_(t, row, 'ultimoContacto', contactoFecha);
+      if (!iso_(row.v[t.map.fechaInicio])) setCell_(t, row, 'fechaInicio', contactoFecha);
     }
     // Ganado o perdido: fecha de cierre si no tiene.
     const etapa = text_(row.v[t.map.etapa]);
     if ((etapa === 'Perdido' || etapa === 'Ganado') && t.map.fechaCierre !== undefined && !iso_(row.v[t.map.fechaCierre])) {
-      setCell_(t, row, 'fechaCierre', it.contactoFecha || today);
+      setCell_(t, row, 'fechaCierre', contactoFecha || today);
     }
     // Nota de la visita: se agrega fechada al final de Comentarios (nunca se borra lo anterior).
     const nota = text_(it.nota);
